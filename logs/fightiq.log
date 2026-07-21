@@ -1,0 +1,10 @@
+2026-07-21 10:42:58 | CRITICAL | fightiq.main | Falha ao importar dependências da interface: No module named 'customtkinter'
+2026-07-21 11:10:39 | INFO     | database | Banco populado com 3 lutadores a partir de C:\Users\joaov\OneDrive\Área de Trabalho\dev\claude\FightIQ\assets\data\fighters_seed.csv
+2026-07-21 11:10:41 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-21 11:18:57 | INFO     | database | Banco de dados já populado; seed ignorado.
+2026-07-21 11:18:59 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-21 11:22:18 | INFO     | database | Banco de dados já populado; seed ignorado.
+2026-07-21 11:22:19 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-21 11:34:54 | INFO     | database | Banco populado com 174 lutadores a partir de C:\Users\joaov\OneDrive\Área de Trabalho\dev\claude\FightIQ\assets\data\fighters_seed.csv
+2026-07-21 11:35:56 | INFO     | database | Banco de dados já populado; seed ignorado.
+2026-07-21 11:35:58 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
