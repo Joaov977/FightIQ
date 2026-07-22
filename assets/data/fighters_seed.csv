@@ -1,4 +1,176 @@
 fighter_id,name,nickname,nationality,weight_class,height_cm,reach_cm,stance,birth_date,wins,losses,draws,no_contests,wins_ko,wins_sub,wins_dec,slpm,str_acc_pct,sapm,str_def_pct,td_avg,td_acc_pct,td_def_pct,sub_avg,avg_fight_time,image_url,ranking,source,source_url,last_updated
-1,Jon Jones,Bones,United States,Heavyweight,193,215,Orthodox,1987-07-19,28,1,0,1,11,7,10,4.46,58,3.00,51,1.90,45,57,0.50,12:26,,,GIDStats.com,https://gidstats.com/fighters/jon_jones.html,2026-07-13
-2,Islam Makhachev,,Russia,Welterweight,178,179,Southpaw,1991-10-27,28,1,0,0,5,13,10,2.25,59,9.00,53,2.20,62,62,0.70,9:51,,#1 P4P (UFC),GIDStats.com,https://gidstats.com/fighters/islam_makhachev.html,2026-07-13
-3,Zhang Weili,Magnum,China,Women's Strawweight,163,160,Switch,1990-09-30,26,4,0,0,11,8,7,5.79,,6.00,,1.40,34,52,0.30,10:08,,#1 Women's Strawweight,GIDStats.com,https://gidstats.com/fighters/weili_zhang.html,2026-07-13
+1,Islam Makhachev,,Russia,Women's Bantamweight,,,Southpaw,,28,1,0,0,5,13,10,9.0,,,,,,,2.2,,,#1 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/islam_makhachev.html,2026-07-22
+2,Ilia Topuria,,Georgia,Women's Bantamweight,,,Orthodox,,17,1,0,0,6,8,2,8.0,,,,6.0,,,1.2,,,#2 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/ilia_topuria.html,2026-07-22
+3,Khamzat Chimaev,,UAE,Women's Bantamweight,,,Orthodox,,15,0,0,0,5,7,3,15.0,,,,8.0,,,1.3,,,#3 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/khamzat_chimaev.html,2026-07-22
+4,Alexander Volkanovski,,Australia,Women's Bantamweight,,,Orthodox,,27,4,0,0,12,3,10,4.0,,,,,,,1.8,,,#4 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/alexander_volkanovski.html,2026-07-22
+5,Alex Pereira,,Brazil,Women's Bantamweight,,,Orthodox,,13,4,0,0,10,0,2,5.0,,,,1.0,,,,,,#5 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/alex_pereira.html,2026-07-22
+6,Petr Yan,,Russia,Women's Bantamweight,,,Switch,,20,5,0,0,7,1,12,4.0,,,,,,,1.9,,,#6 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/petr_yan.html,2026-07-22
+7,Merab Dvalishvili,,Georgia,Women's Bantamweight,,,Orthodox,,21,5,0,0,3,2,16,4.0,,,,,,,6.7,,,#7 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/merab_dvalishvili.html,2026-07-22
+8,Tom Aspinall,,England,Women's Bantamweight,,,Switch,,15,3,0,0,11,3,0,,,,,4.0,,,0.7,,,#8 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/tom_aspinall.html,2026-07-22
+9,Alexandre Pantoja,,Brazil,Women's Bantamweight,,,Orthodox,,30,6,0,0,2,11,9,3.0,,,,11.0,,,0.9,,,#9 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/alexandre_pantoja.html,2026-07-22
+10,Max Holloway,,USA,Women's Bantamweight,,,Orthodox,,27,9,0,0,11,3,12,4.0,,,,8.0,,,0.3,,,#10 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/max_holloway.html,2026-07-22
+11,Joshua Van,,Myanmar,Women's Bantamweight,,,Orthodox,,16,2,0,0,7,2,6,,,,,,,,,,,#11 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/joshua_thawng.html,2026-07-22
+12,Dricus Du Plessis,,South Africa,Women's Bantamweight,,,Switch,,23,3,0,0,9,11,3,7.0,,,,9.0,,,1.8,,,#12 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/dricus_du_plessis.html,2026-07-22
+13,Magomed Ankalaev,,Russia,Women's Bantamweight,,,Switch,,21,2,1,0,10,0,9,3.0,,,,9.0,,,,,,#13 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/magomed_ankalaev.html,2026-07-22
+14,Jack Della Maddalena,,Australia,Women's Bantamweight,,,Switch,,18,3,0,0,12,2,4,,,,,,,,,,,#14 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/jack_della.html,2026-07-22
+15,Arman Tsarukyan,,Armenia,Women's Bantamweight,,,Orthodox,,23,3,0,0,9,5,8,3.0,,,,,,,,,,#15 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/arman_tsarukyan.html,2026-07-22
+16,Ciryl Gane,,France,Heavyweight,,,Switch,,14,2,0,0,6,3,4,3.0,,,,6.0,,,0.6,,,#2 Heavyweight,GIDStats.com,https://gidstats.com/fighters/ciryl_gane.html,2026-07-22
+17,Alexander Volkov,,Russia,Heavyweight,,,Orthodox,,39,11,0,0,23,4,11,3.0,,,,7.0,,,,,,#3 Heavyweight,GIDStats.com,https://gidstats.com/fighters/alexander_volkov.html,2026-07-22
+18,Sergei Pavlovich,,Russia,Heavyweight,,,Southpaw,,21,3,0,0,16,0,5,,,,,,,,,,,#4 Heavyweight,GIDStats.com,https://gidstats.com/fighters/sergei_pavlovich.html,2026-07-22
+19,Curtis Blaydes,,USA,Heavyweight,,,Orthodox,,19,6,0,0,13,0,6,3.0,,,,,,,,,,#5 Heavyweight,GIDStats.com,https://gidstats.com/fighters/curtis_blaydes.html,2026-07-22
+20,Waldo Cortes Acosta,,Dominican Republic,Heavyweight,,,Orthodox,,17,2,0,0,8,1,7,3.0,,,,,,,,,,#6 Heavyweight,GIDStats.com,https://gidstats.com/fighters/waldo_cortes-acosta.html,2026-07-22
+21,Serghei Spivac,,Moldova,Heavyweight,,,Orthodox,,18,6,0,0,6,7,3,6.0,,,,,,,2.7,,,#7 Heavyweight,GIDStats.com,https://gidstats.com/fighters/serghei_spivac.html,2026-07-22
+22,Rizvan Kuniev,,Russia,Heavyweight,,,Orthodox,,14,3,1,0,5,2,4,,,,,,,,,,,#8 Heavyweight,GIDStats.com,https://gidstats.com/fighters/rizvan_kuniev.html,2026-07-22
+23,Derrick Lewis,,USA,Heavyweight,,,Orthodox,,29,14,0,0,19,0,4,5.0,,,,8.0,,,,,,#9 Heavyweight,GIDStats.com,https://gidstats.com/fighters/derrick_lewis.html,2026-07-22
+24,Marcin Tybura,,Poland,Heavyweight,,,Switch,,27,11,0,0,9,4,9,3.0,,,,,,,1.2,,,#10 Heavyweight,GIDStats.com,https://gidstats.com/fighters/marcin_tybura.html,2026-07-22
+25,Ante Delija,,Croatia,Heavyweight,,,Orthodox,,26,8,0,0,9,3,6,,,,,,,,,,,#11 Heavyweight,GIDStats.com,https://gidstats.com/fighters/ante_delija.html,2026-07-22
+26,Talisson Teixeira,,Brazil,Heavyweight,,,Orthodox,,9,2,0,0,7,1,1,,,,,,,,,,,#12 Heavyweight,GIDStats.com,https://gidstats.com/fighters/talisson_teixeira.html,2026-07-22
+27,Shamil Gaziev,,Bahrain,Heavyweight,,,Orthodox,,14,2,0,0,9,3,2,,,,,,,,,,,#13 Heavyweight,GIDStats.com,https://gidstats.com/fighters/shamil_gaziev.html,2026-07-22
+28,Michael Parkin,,England,Heavyweight,,,Orthodox,,10,1,0,0,6,1,3,,,,,,,,,,,#14 Heavyweight,GIDStats.com,https://gidstats.com/fighters/michael_parkin.html,2026-07-22
+29,Valter Walker,,Brazil,Heavyweight,,,Orthodox,,15,1,0,0,6,5,4,,,,,,,,,,,#15 Heavyweight,GIDStats.com,https://gidstats.com/fighters/valter_walker.html,2026-07-22
+30,Vitor Petrino,,Brazil,Heavyweight,,,Orthodox,,14,2,0,0,7,2,4,6.0,,,,7.0,,,7.0,,,#16 Heavyweight,GIDStats.com,https://gidstats.com/fighters/vitor_petrino.html,2026-07-22
+31,Jiri Prochazka,,Czechia,Light Heavyweight,,,Orthodox,,32,6,1,0,22,1,1,6.0,,,,1.0,,,0.3,,,#3 Light Heavyweight,GIDStats.com,https://gidstats.com/fighters/jiri_prochazka.html,2026-07-22
+32,Carlos Ulberg,,New Zealand,Light Heavyweight,,,Orthodox,,14,1,0,0,7,1,4,9.0,,,,2.0,,,,,,#4 Light Heavyweight,GIDStats.com,https://gidstats.com/fighters/carlos_ulberg.html,2026-07-22
+33,Khalil Rountree,,USA,Light Heavyweight,,,Southpaw,,14,7,0,0,10,0,5,4.0,,,,,,,1.0,,,#5 Light Heavyweight,GIDStats.com,https://gidstats.com/fighters/khalil_rountree.html,2026-07-22
+34,Jan Blachowicz,,Poland,Light Heavyweight,,,Orthodox,,29,11,2,0,9,10,11,3.0,,,,,,,0.8,,,#6 Light Heavyweight,GIDStats.com,https://gidstats.com/fighters/jan_blachowicz.html,2026-07-22
+35,Azamat Murzakanov,,Russia,Light Heavyweight,,,Southpaw,,16,1,0,0,12,1,3,7.0,,,,1.0,,,,,,#7 Light Heavyweight,GIDStats.com,https://gidstats.com/fighters/azamat_murzakanov.html,2026-07-22
+36,Jamahal Hill,,USA,Light Heavyweight,,,Southpaw,,12,4,0,0,7,0,5,2.0,,,,,,,,,,#8 Light Heavyweight,GIDStats.com,https://gidstats.com/fighters/jamahal_hill.html,2026-07-22
+37,Volkan Oezdemir,,Switzerland,Light Heavyweight,,,Orthodox,,21,8,0,0,11,1,4,4.0,,,,4.0,,,,,,#9 Light Heavyweight,GIDStats.com,https://gidstats.com/fighters/volkan_oezdemir.html,2026-07-22
+38,Bogdan Guskov,,Uzbekistan,Light Heavyweight,,,Orthodox,,18,3,1,0,14,3,0,,,,,,,,,,,#10 Light Heavyweight,GIDStats.com,https://gidstats.com/fighters/bogdan_guskov.html,2026-07-22
+39,Dominick Reyes,,USA,Light Heavyweight,,,Southpaw,,16,5,0,0,10,2,3,3.0,,,,2.0,,,0.2,,,#11 Light Heavyweight,GIDStats.com,https://gidstats.com/fighters/dominick_reyes.html,2026-07-22
+40,Aleksandar Rakic,,Serbia,Light Heavyweight,,,Orthodox,,14,6,0,0,5,0,4,3.0,,,,5.0,,,0.6,,,#12 Light Heavyweight,GIDStats.com,https://gidstats.com/fighters/aleksandar_rakic.html,2026-07-22
+41,Johnny Walker,,Brazil,Light Heavyweight,,,Orthodox,,22,10,0,0,13,2,2,3.0,,,,1.0,,,0.1,,,#13 Light Heavyweight,GIDStats.com,https://gidstats.com/fighters/johnny_walker.html,2026-07-22
+42,Nikita Krylov,,Russia,Light Heavyweight,,,Orthodox,,31,11,0,0,9,8,2,5.0,,,,,,,1.1,,,#14 Light Heavyweight,GIDStats.com,https://gidstats.com/fighters/nikita_krylov.html,2026-07-22
+43,Dustin Jacoby,,USA,Light Heavyweight,,,Orthodox,,22,9,1,0,11,0,6,4.0,,,,2.0,,,,,,#15 Light Heavyweight,GIDStats.com,https://gidstats.com/fighters/dustin_jacoby.html,2026-07-22
+44,Zhang Mingyang,,China,Light Heavyweight,,,Orthodox,,19,8,0,0,12,6,0,,,,,,,,,,,#16 Light Heavyweight,GIDStats.com,https://gidstats.com/fighters/mingyang_zhang.html,2026-07-22
+45,Nassourdine Imavov,,France,Middleweight,,,Orthodox,,17,4,0,0,7,4,6,5.0,,,,4.0,,,0.7,,,#3 Middleweight,GIDStats.com,https://gidstats.com/fighters/nassourdine_imavov.html,2026-07-22
+46,Sean Strickland,,USA,Middleweight,,,Orthodox,,30,7,0,0,11,4,13,3.0,,,,,,,1.0,,,#4 Middleweight,GIDStats.com,https://gidstats.com/fighters/sean_strickland.html,2026-07-22
+47,Brendan Allen,,USA,Middleweight,,,Orthodox,,27,7,0,0,6,14,7,5.0,,,,8.0,,,0.7,,,#5 Middleweight,GIDStats.com,https://gidstats.com/fighters/brendan_allen.html,2026-07-22
+48,Israel Adesanya,,Nigeria,Middleweight,,,Switch,,24,6,0,0,14,0,8,2.0,,,,1.0,,,0.1,,,#6 Middleweight,GIDStats.com,https://gidstats.com/fighters/israel_adesanya.html,2026-07-22
+49,Anthony Hernandez,,USA,Middleweight,,,Orthodox,,15,3,0,0,3,9,3,6.0,,,,,,,3.7,,,#7 Middleweight,GIDStats.com,https://gidstats.com/fighters/anthony_hernandez.html,2026-07-22
+50,Caio Borralho,,Brazil,Middleweight,,,Southpaw,,18,2,0,0,3,4,9,6.0,,,,6.0,,,2.0,,,#8 Middleweight,GIDStats.com,https://gidstats.com/fighters/caio_borralho.html,2026-07-22
+51,Reinier de Ridder,,Netherlands,Middleweight,,,Southpaw,,21,4,0,0,4,12,3,,,,,,,,,,,#9 Middleweight,GIDStats.com,https://gidstats.com/fighters/reinier_de_ridder.html,2026-07-22
+52,Robert Whittaker,,Australia,Middleweight,,,Orthodox,,26,9,0,0,9,0,11,4.0,,,,,,,,,,#10 Middleweight,GIDStats.com,https://gidstats.com/fighters/robert_whittaker.html,2026-07-22
+53,Jared Cannonier,,USA,Middleweight,,,Switch,,18,9,0,0,8,0,4,4.0,,,,2.0,,,,,,#11 Middleweight,GIDStats.com,https://gidstats.com/fighters/jared_cannonier.html,2026-07-22
+54,Roman Dolidze,,Georgia,Middleweight,,,Orthodox,,15,5,0,0,8,3,4,8.0,,,,9.0,,,1.1,,,#12 Middleweight,GIDStats.com,https://gidstats.com/fighters/roman_dolidze.html,2026-07-22
+55,Paulo Costa,,Brazil,Middleweight,,,Orthodox,,16,4,0,0,9,2,3,7.0,,,,3.0,,,,,,#13 Middleweight,GIDStats.com,https://gidstats.com/fighters/paulo_costa.html,2026-07-22
+56,Gregory Rodrigues,,Brazil,Middleweight,,,Orthodox,,19,6,0,0,11,4,4,13.0,,,,8.0,,,1.6,,,#14 Middleweight,GIDStats.com,https://gidstats.com/fighters/gregory_rodrigues.html,2026-07-22
+57,Joseph Pyfer,,USA,Middleweight,,,Orthodox,,16,3,0,0,9,4,2,8.0,,,,,,,,,,#15 Middleweight,GIDStats.com,https://gidstats.com/fighters/joseph_pyfer.html,2026-07-22
+58,Brunno Ferreira,,Brazil,Middleweight,,,Orthodox,,15,3,0,0,9,5,1,,,,,,,,,,,#16 Middleweight,GIDStats.com,https://gidstats.com/fighters/brunno_ferreira.html,2026-07-22
+59,Ian Machado Garry,,Ireland,Welterweight,,,Orthodox,,17,1,0,0,7,1,9,5.0,,,,1.0,,,,,,#3 Welterweight,GIDStats.com,https://gidstats.com/fighters/ian_garry.html,2026-07-22
+60,Michael Morales,,Mexico,Welterweight,,,Orthodox,,19,0,0,0,13,1,4,4.0,,,,,,,,,,#4 Welterweight,GIDStats.com,https://gidstats.com/fighters/michael_morales.html,2026-07-22
+61,Belal Muhammad,,Palestine,Welterweight,,,Orthodox,,24,6,0,0,5,1,18,3.0,,,,,,,1.9,,,#5 Welterweight,GIDStats.com,https://gidstats.com/fighters/belal_muhammad.html,2026-07-22
+62,Carlos Prates,,Brazil,Welterweight,,,Southpaw,,23,7,0,0,15,2,1,,,,,,,,,,,#6 Welterweight,GIDStats.com,https://gidstats.com/fighters/carlos_prates.html,2026-07-22
+63,Sean Brady,,USA,Welterweight,,,Orthodox,,18,2,0,0,3,6,9,6.0,,,,,,,2.3,,,#7 Welterweight,GIDStats.com,https://gidstats.com/fighters/sean_brady.html,2026-07-22
+64,Kamaru Usman,,Nigeria,Welterweight,,,Switch,,21,4,0,0,9,1,13,2.0,,,,,,,3.5,,,#8 Welterweight,GIDStats.com,https://gidstats.com/fighters/kamaru_usman.html,2026-07-22
+65,Leon Edwards,,United Kingdom,Welterweight,,,Southpaw,,22,6,0,0,7,3,11,3.0,,,,,,,1.3,,,#9 Welterweight,GIDStats.com,https://gidstats.com/fighters/leon_edwards.html,2026-07-22
+66,Joaquin Buckley,,USA,Welterweight,,,Southpaw,,21,7,0,0,12,0,6,4.0,,,,7.0,,,,,,#10 Welterweight,GIDStats.com,https://gidstats.com/fighters/joaquin_buckley.html,2026-07-22
+67,Gabriel Bonfim,,Brazil,Welterweight,,,Orthodox,,20,1,0,0,1,11,3,,,9.0,,,,,,,,#11 Welterweight,GIDStats.com,https://gidstats.com/fighters/gabriel_bonfim.html,2026-07-22
+68,Gilbert Burns,,Brazil,Welterweight,,,Orthodox,,22,9,0,0,5,7,7,5.0,,,,,,,1.7,,,#12 Welterweight,GIDStats.com,https://gidstats.com/fighters/gilbert_burns.html,2026-07-22
+69,Uros Medic,,Serbia,Welterweight,,,Southpaw,,13,3,0,0,11,2,0,7.0,,,,,,,,,,#13 Welterweight,GIDStats.com,https://gidstats.com/fighters/uros_medic.html,2026-07-22
+70,Colby Covington,,USA,Welterweight,,,Southpaw,,17,5,0,0,4,4,9,2.0,,,,,,,4.5,,,#14 Welterweight,GIDStats.com,https://gidstats.com/fighters/colby_covington.html,2026-07-22
+71,Michael Page,,United Kingdom,Welterweight,,,Orthodox,,25,3,0,0,12,4,8,,,,,,,,,,,#15 Welterweight,GIDStats.com,https://gidstats.com/fighters/page_michael.html,2026-07-22
+72,Daniel Rodriguez,,USA,Welterweight,,,Southpaw,,20,5,0,0,9,4,7,7.0,,,,1.0,,,0.1,,,#16 Welterweight,GIDStats.com,https://gidstats.com/fighters/daniel_rodriguez.html,2026-07-22
+73,Justin Gaethje,,USA,Lightweight,,,Orthodox,,28,5,0,0,19,0,6,6.0,,,,1.0,,,,,,#2 Lightweight,GIDStats.com,https://gidstats.com/fighters/justin_gaethje.html,2026-07-22
+74,Charles Oliveira,,Brazil,Lightweight,,,Orthodox,,37,11,0,0,4,18,4,7.0,,,,,,,1.1,,,#4 Lightweight,GIDStats.com,https://gidstats.com/fighters/charles_oliveira.html,2026-07-22
+75,Benoit Saint-Denis,,France,Lightweight,,,Southpaw,,17,3,0,0,7,10,0,8.0,,,,6.0,,,2.0,,,#6 Lightweight,GIDStats.com,https://gidstats.com/fighters/benoit_saint-denis.html,2026-07-22
+76,Paddy Pimblett,,England,Lightweight,,,Orthodox,,23,4,0,0,7,10,6,3.0,,,,2.0,,,0.5,,,#7 Lightweight,GIDStats.com,https://gidstats.com/fighters/paddy_pimblett.html,2026-07-22
+77,Mateusz Gamrot,,Poland,Lightweight,,,Southpaw,,26,4,0,0,7,6,12,4.0,,,,,,,3.7,,,#8 Lightweight,GIDStats.com,https://gidstats.com/fighters/mateusz_gamrot.html,2026-07-22
+78,Dan Hooker,,New Zealand,Lightweight,,,Switch,,24,13,0,0,10,4,5,4.0,,,,11.0,,,0.6,,,#9 Lightweight,GIDStats.com,https://gidstats.com/fighters/dan_hooker.html,2026-07-22
+79,Mauricio Ruffy,,Brazil,Lightweight,,,Orthodox,,14,2,0,0,11,0,1,,,,,,,,,,,#10 Lightweight,GIDStats.com,https://gidstats.com/fighters/mauricio_ruffy.html,2026-07-22
+80,Renato Moicano,,Brazil,Lightweight,,,Orthodox,,21,7,1,0,2,8,5,4.0,,,,,,,1.0,,,#11 Lightweight,GIDStats.com,https://gidstats.com/fighters/renato_moicano.html,2026-07-22
+81,Rafael Fiziev,,Azerbaijan,Lightweight,,,Switch,,13,5,0,0,8,1,4,6.0,,,,2.0,,,,,,#12 Lightweight,GIDStats.com,https://gidstats.com/fighters/rafael_fiziev.html,2026-07-22
+82,Beneil Dariush,,USA,Lightweight,,,Southpaw,,23,7,1,0,3,5,9,5.0,,,,,,,1.2,,,#13 Lightweight,GIDStats.com,https://gidstats.com/fighters/beneil_dariush.html,2026-07-22
+83,Michael Chandler,,USA,Lightweight,,,Orthodox,,23,11,0,0,9,7,5,6.0,,,,5.0,,,1.0,,,#14 Lightweight,GIDStats.com,https://gidstats.com/fighters/chandler_michael.html,2026-07-22
+84,Manuel Torres,,Mexico,Lightweight,,,Orthodox,,17,3,0,0,7,5,1,,,,,,,,,,,#15 Lightweight,GIDStats.com,https://gidstats.com/fighters/manuel_torres.html,2026-07-22
+85,Fares Ziam,,France,Lightweight,,,Orthodox,,18,5,0,0,6,3,7,2.0,,,,4.0,,,,,,#16 Lightweight,GIDStats.com,https://gidstats.com/fighters/fares_ziam.html,2026-07-22
+86,Movsar Evloev,,Russia,Featherweight,,,Orthodox,,20,0,0,0,3,4,12,4.0,,,,,,,4.8,,,#2 Featherweight,GIDStats.com,https://gidstats.com/fighters/movsar_evloev.html,2026-07-22
+87,Diego Lopes,,Brazil,Featherweight,,,Orthodox,,28,8,0,0,9,10,4,,,,,,,,,,,#3 Featherweight,GIDStats.com,https://gidstats.com/fighters/diego_lopes.html,2026-07-22
+88,Lerone Murphy,,England,Featherweight,,,Orthodox,,17,1,1,0,8,0,9,9.0,,,,3.0,,,0.6,,,#4 Featherweight,GIDStats.com,https://gidstats.com/fighters/lerone_murphy.html,2026-07-22
+89,Yair Rodriguez,,Mexico,Featherweight,,,Orthodox,,20,5,0,0,8,6,7,5.0,,,,9.0,,,0.7,,,#5 Featherweight,GIDStats.com,https://gidstats.com/fighters/yair_rodriguez.html,2026-07-22
+90,Aljamain Sterling,,USA,Featherweight,,,Orthodox,,25,5,0,0,4,7,12,6.0,,,,,,,1.7,,,#6 Featherweight,GIDStats.com,https://gidstats.com/fighters/aljamain_sterling.html,2026-07-22
+91,Jean Silva,,Brazil,Featherweight,,,Orthodox,,16,3,0,0,11,3,1,,,,,,,,,,,#7 Featherweight,GIDStats.com,https://gidstats.com/fighters/jean_silva.html,2026-07-22
+92,Arnold Allen,,England,Featherweight,,,Southpaw,,20,4,0,0,7,4,9,6.0,,,,11.0,,,1.1,,,#8 Featherweight,GIDStats.com,https://gidstats.com/fighters/arnold_allen.html,2026-07-22
+93,Youssef Zalal,,Morocco,Featherweight,,,Orthodox,,18,5,1,0,4,10,4,4.0,,,,,,,2.3,,,#9 Featherweight,GIDStats.com,https://gidstats.com/fighters/youssef_zalal.html,2026-07-22
+94,Steve Garcia,,USA,Featherweight,,,Southpaw,,19,6,0,0,14,0,4,9.0,,,,4.0,,,0.8,,,#10 Featherweight,GIDStats.com,https://gidstats.com/fighters/steve_garcia.html,2026-07-22
+95,Brian Ortega,,USA,Featherweight,,,Southpaw,,16,5,0,0,3,6,3,6.0,,,,9.0,,,0.8,,,#11 Featherweight,GIDStats.com,https://gidstats.com/fighters/brian_ortega.html,2026-07-22
+96,Josh Emmett,,USA,Featherweight,,,Orthodox,,19,7,0,0,7,2,10,4.0,,,,11.0,,,0.9,,,#12 Featherweight,GIDStats.com,https://gidstats.com/fighters/josh_emmett.html,2026-07-22
+97,Patricio Pitbull,,Brazil,Featherweight,,,Orthodox,,37,9,0,0,9,5,11,,,,,,,,,,,#13 Featherweight,GIDStats.com,https://gidstats.com/fighters/pitbull_patricio.html,2026-07-22
+98,Melquizael Costa,,Brazil,Featherweight,,,Southpaw,,26,7,0,0,6,7,7,2.0,,,,,,,,,,#14 Featherweight,GIDStats.com,https://gidstats.com/fighters/melquizael_costa.html,2026-07-22
+99,Kevin Vallejos,,Argentina,Featherweight,,,Switch,,18,1,0,0,13,2,3,,,,,,,,,,,#15 Featherweight,GIDStats.com,https://gidstats.com/fighters/kevin_vallejos.html,2026-07-22
+100,David Onama,,Uganda,Featherweight,,,Switch,,14,3,0,0,7,4,3,6.0,,,,3.0,,,0.8,,,#16 Featherweight,GIDStats.com,https://gidstats.com/fighters/david_onama.html,2026-07-22
+101,Umar Nurmagomedov,,Russia,Bantamweight,,,Orthodox,,20,1,0,0,2,7,11,,,,,9.0,,,2.3,,,#3 Bantamweight,GIDStats.com,https://gidstats.com/fighters/umar_nurmagomedov.html,2026-07-22
+102,Sean O'Malley,,USA,Bantamweight,,,Switch,,20,3,0,0,12,2,6,10.0,,,,3.0,,,0.3,,,#4 Bantamweight,GIDStats.com,https://gidstats.com/fighters/sean_omalley.html,2026-07-22
+103,Cory Sandhagen,,USA,Bantamweight,,,Orthodox,,18,6,0,0,8,3,7,6.0,,,,9.0,,,0.8,,,#5 Bantamweight,GIDStats.com,https://gidstats.com/fighters/cory_sandhagen.html,2026-07-22
+104,Song Yadong,,China,Bantamweight,,,Orthodox,,23,9,1,0,9,4,11,5.0,,,,5.0,,,0.5,,,#6 Bantamweight,GIDStats.com,https://gidstats.com/fighters/song_yadong.html,2026-07-22
+105,Aiemann Zahabi,,Canada,Bantamweight,,,Orthodox,,14,3,0,0,6,2,6,4.0,,,,1.0,,,,,,#7 Bantamweight,GIDStats.com,https://gidstats.com/fighters/aiemann_zahabi.html,2026-07-22
+106,Deiveson Figueiredo,,Brazil,Bantamweight,,,Orthodox,,25,7,1,0,8,5,6,4.0,,,,,,,1.1,,,#8 Bantamweight,GIDStats.com,https://gidstats.com/fighters/deiveson_figueiredo.html,2026-07-22
+107,Mario Bautista,,USA,Bantamweight,,,Switch,,17,3,0,0,3,7,8,13.0,,,,11.0,,,1.4,,,#9 Bantamweight,GIDStats.com,https://gidstats.com/fighters/mario_bautista.html,2026-07-22
+108,Marlon Vera,,Ecuador,Bantamweight,,,Switch,,23,12,1,0,8,7,5,6.0,,,,10.0,,,0.5,,,#10 Bantamweight,GIDStats.com,https://gidstats.com/fighters/marlon_vera.html,2026-07-22
+109,David Martinez,,Mexico,Bantamweight,,,Orthodox,,14,1,0,0,8,0,5,,,,,,,,,,,#11 Bantamweight,GIDStats.com,https://gidstats.com/fighters/david_martinez_1.html,2026-07-22
+110,Payton Talbott,,USA,Bantamweight,,,Switch,,11,1,0,0,7,1,3,,,,,,,,,,,#12 Bantamweight,GIDStats.com,https://gidstats.com/fighters/payton_talbott.html,2026-07-22
+111,Vinicius de Oliveira,,Brazil,Bantamweight,,,Switch,,24,4,0,0,12,1,5,,,,,,,,,,,#13 Bantamweight,GIDStats.com,https://gidstats.com/fighters/vinicius_de_oliveira.html,2026-07-22
+112,Rob Font,,Puerto Rico,Bantamweight,,,Orthodox,,22,10,0,0,9,4,9,5.0,,,,12.0,,,0.8,,,#14 Bantamweight,GIDStats.com,https://gidstats.com/fighters/rob_font.html,2026-07-22
+113,Kyler Phillips,,USA,Bantamweight,,,Orthodox,,12,4,0,0,5,2,5,10.0,,,,,,,2.8,,,#15 Bantamweight,GIDStats.com,https://gidstats.com/fighters/kyler_phillips.html,2026-07-22
+114,Montel Jackson,,USA,Bantamweight,,,Southpaw,,15,3,0,0,8,1,6,4.0,,,,,,,2.8,,,#16 Bantamweight,GIDStats.com,https://gidstats.com/fighters/montel_jackson.html,2026-07-22
+115,Manel Kape,,Portugal,Flyweight,,,Southpaw,,23,7,0,0,12,2,2,6.0,,,,2.0,,,0.5,,,#3 Flyweight,GIDStats.com,https://gidstats.com/fighters/manel_kape.html,2026-07-22
+116,Tatsuro Taira,,Japan,Flyweight,,,Orthodox,,18,1,0,0,6,8,4,6.0,,,,5.0,,,1.7,,,#4 Flyweight,GIDStats.com,https://gidstats.com/fighters/tatsuro_taira.html,2026-07-22
+117,Brandon Royval,,USA,Flyweight,,,Southpaw,,17,9,0,0,4,9,4,6.0,,,,2.0,,,0.3,,,#5 Flyweight,GIDStats.com,https://gidstats.com/fighters/brandon_royval.html,2026-07-22
+118,Kyoji Horiguchi,,Japan,Flyweight,,,Orthodox,,36,6,0,0,10,7,14,4.0,,,,,,,,,,#6 Flyweight,GIDStats.com,https://gidstats.com/fighters/kyoji_horiguchi.html,2026-07-22
+119,Brandon Moreno,,Mexico,Flyweight,,,Orthodox,,23,10,2,0,5,11,7,3.0,,,,,,,1.8,,,#7 Flyweight,GIDStats.com,https://gidstats.com/fighters/brandon_moreno.html,2026-07-22
+120,Amir Albazi,,Iraq,Flyweight,,,Orthodox,,17,3,0,0,3,7,3,7.0,,,,6.0,,,1.5,,,#8 Flyweight,GIDStats.com,https://gidstats.com/fighters/amir_albazi.html,2026-07-22
+121,Asu Almabaev,,Kazakhstan,Flyweight,,,Orthodox,,23,3,0,0,3,10,10,,,,,,,,,,,#9 Flyweight,GIDStats.com,https://gidstats.com/fighters/asu_almabaev.html,2026-07-22
+122,Tim Elliott,,USA,Flyweight,,,Southpaw,,21,13,1,0,1,7,11,4.0,,,,,,,3.1,,,#10 Flyweight,GIDStats.com,https://gidstats.com/fighters/tim_elliott.html,2026-07-22
+123,Alex Perez,,USA,Flyweight,,,Orthodox,,26,10,0,0,7,7,9,,,,,11.0,,,1.1,,,#11 Flyweight,GIDStats.com,https://gidstats.com/fighters/alex_perez.html,2026-07-22
+124,Steve Erceg,,Australia,Flyweight,,,Orthodox,,14,4,0,0,2,6,6,,,,,,,,,,,#12 Flyweight,GIDStats.com,https://gidstats.com/fighters/steve_erceg.html,2026-07-22
+125,Tagir Ulanbekov,,Russia,Flyweight,,,Southpaw,,17,3,0,0,1,8,8,4.0,,,,12.0,,,3.0,,,#13 Flyweight,GIDStats.com,https://gidstats.com/fighters/tagir_ulanbekov.html,2026-07-22
+126,Charles Johnson,,USA,Flyweight,,,Switch,,19,8,0,0,9,3,8,2.0,,,,,,,,,,#14 Flyweight,GIDStats.com,https://gidstats.com/fighters/charles_johnson.html,2026-07-22
+127,Bruno Silva,,Brazil,Flyweight,,,Orthodox,,15,9,2,0,5,3,2,4.0,,,,10.0,,,1.7,,,#15 Flyweight,GIDStats.com,https://gidstats.com/fighters/bruno_silva.html,2026-07-22
+128,Joseph Morales,,USA,Flyweight,,,Switch,,14,2,0,0,2,9,5,4.0,,,,1.0,,,0.3,,,#16 Flyweight,GIDStats.com,https://gidstats.com/fighters/joseph_morales.html,2026-07-22
+129,Valentina Shevchenko,,Kyrgyzstan,Flyweight,,,Southpaw,,26,4,1,0,6,7,11,4.0,,,,,,,3.0,,,#17 Flyweight,GIDStats.com,https://gidstats.com/fighters/valentina_shevchenko.html,2026-07-22
+130,Kayla Harrison,,USA,Flyweight,,,Southpaw,,19,1,0,0,6,8,5,,,,,,,,,,,#18 Flyweight,GIDStats.com,https://gidstats.com/fighters/kayla_harrison.html,2026-07-22
+131,Zhang Weili,,China,Flyweight,,,Switch,,26,4,0,0,11,8,7,6.0,,,,,,,1.4,,,#19 Flyweight,GIDStats.com,https://gidstats.com/fighters/weili_zhang.html,2026-07-22
+132,Natália Silva,,Brazil,Flyweight,,,Southpaw,,19,5,1,0,3,5,5,9.0,,,,2.0,,,,,,#20 Flyweight,GIDStats.com,https://gidstats.com/fighters/natlia_silva.html,2026-07-22
+133,Mackenzie Dern,,Brazil,Flyweight,,,Orthodox,,16,5,0,0,0,8,9,5.0,,,,4.0,,,0.4,,,#21 Flyweight,GIDStats.com,https://gidstats.com/fighters/mackenzie_dern.html,2026-07-22
+134,Manon Fiorot,,France,Flyweight,,,Orthodox,,13,2,0,0,8,0,7,12.0,,,,7.0,,,,,,#22 Flyweight,GIDStats.com,https://gidstats.com/fighters/fiorot_manon.html,2026-07-22
+135,Erin Blanchfield,,USA,Flyweight,,,Orthodox,,14,2,0,0,2,5,7,9.0,,,,12.0,,,2.4,,,#23 Flyweight,GIDStats.com,https://gidstats.com/fighters/blanchfield_erin.html,2026-07-22
+136,Julianna Peña,,USA,Flyweight,,,,,11,6,0,0,3,6,5,6.0,,,,,,,1.6,,,#24 Flyweight,GIDStats.com,https://gidstats.com/fighters/julianna_pea.html,2026-07-22
+137,Alexa Grasso,,Mexico,Flyweight,,,Orthodox,,17,5,1,0,2,2,9,8.0,,,,4.0,,,0.4,,,#25 Flyweight,GIDStats.com,https://gidstats.com/fighters/alexa_grasso.html,2026-07-22
+138,Virna Jandiroba,,Brazil,Flyweight,,,Orthodox,,23,4,0,0,1,11,7,5.0,,,,12.0,,,1.7,,,#26 Flyweight,GIDStats.com,https://gidstats.com/fighters/virna_jandiroba.html,2026-07-22
+139,Raquel Pennington,,USA,Flyweight,,,Orthodox,,16,9,0,0,1,4,12,4.0,,,,,,,0.9,,,#27 Flyweight,GIDStats.com,https://gidstats.com/fighters/raquel_pennington.html,2026-07-22
+140,Tatiana Suarez,,USA,Flyweight,,,Southpaw,,12,1,0,0,2,7,5,8.0,,,,,,,4.0,,,#28 Flyweight,GIDStats.com,https://gidstats.com/fighters/tatiana_suarez.html,2026-07-22
+141,Rose Namajunas,,USA,Flyweight,,,Orthodox,,14,7,0,0,2,8,7,6.0,,,,,,,1.5,,,#29 Flyweight,GIDStats.com,https://gidstats.com/fighters/rose_namajunas.html,2026-07-22
+142,Xiaonan Yan,,China,Flyweight,,,Orthodox,,19,5,0,0,8,1,9,5.52,,,,8.0,,,,,,#30 Flyweight,GIDStats.com,https://gidstats.com/fighters/yan_xiaonan.html,2026-07-22
+143,Maycee Barber,,USA,Flyweight,,,Switch,,15,3,0,0,6,2,7,4.0,,,,10.0,,,1.0,,,#31 Flyweight,GIDStats.com,https://gidstats.com/fighters/maycee_barber.html,2026-07-22
+144,Amanda Lemos,,Brazil,Women's Strawweight,,,Southpaw,,15,6,1,0,5,3,4,9.0,,,,5.0,,,0.6,,,#6 Women's Strawweight,GIDStats.com,https://gidstats.com/fighters/amanda_lemos.html,2026-07-22
+145,Loopy Godinez,,Mexico,Women's Strawweight,,,Orthodox,,14,6,0,0,0,3,11,4.0,,,,,,,3.4,,,#7 Women's Strawweight,GIDStats.com,https://gidstats.com/fighters/godinez_lupita.html,2026-07-22
+146,Tabatha Ricci,,Brazil,Women's Strawweight,,,Orthodox,,12,4,0,0,1,2,7,4.0,,,,,,,3.5,,,#8 Women's Strawweight,GIDStats.com,https://gidstats.com/fighters/tabatha_ricci.html,2026-07-22
+147,Gillian Robertson,,Canada,Women's Strawweight,,,Orthodox,,17,8,0,0,3,9,5,5.0,,,,,,,1.6,,,#9 Women's Strawweight,GIDStats.com,https://gidstats.com/fighters/gillian_robertson.html,2026-07-22
+148,Jessica Andrade,,Brazil,Women's Strawweight,,,Orthodox,,26,15,0,0,6,5,8,7.0,,,,,,,1.7,,,#10 Women's Strawweight,GIDStats.com,https://gidstats.com/fighters/jessica_andrade.html,2026-07-22
+149,Amanda Ribas,,Brazil,Women's Strawweight,,,Orthodox,,12,7,0,0,2,3,5,10.0,,,,,,,1.6,,,#11 Women's Strawweight,GIDStats.com,https://gidstats.com/fighters/amanda_ribas.html,2026-07-22
+150,Fatima Kline,,USA,Women's Strawweight,,,Orthodox,,9,1,0,0,3,1,4,,,,,,,,,,,#12 Women's Strawweight,GIDStats.com,https://gidstats.com/fighters/fatima_kline.html,2026-07-22
+151,Denise Gomes,,Brazil,Women's Strawweight,,,Orthodox,,12,3,0,0,7,0,5,4.0,,,,,,,6.0,,,#13 Women's Strawweight,GIDStats.com,https://gidstats.com/fighters/denise_gomes.html,2026-07-22
+152,Alexia Thainara,,Brazil,Women's Strawweight,,,Orthodox,,14,1,0,0,0,8,5,,,,,,,,,,,#14 Women's Strawweight,GIDStats.com,https://gidstats.com/fighters/alexia_thainara.html,2026-07-22
+153,Angela Hill,,USA,Women's Strawweight,,,Orthodox,,19,16,0,0,5,1,13,4.0,,,,12.0,,,0.6,,,#15 Women's Strawweight,GIDStats.com,https://gidstats.com/fighters/angela_hill.html,2026-07-22
+154,Jasmine Jasudavicius,,Canada,Women's Flyweight,,,Orthodox,,15,4,0,0,2,5,9,11.0,,,,6.0,,,,,,#7 Women's Flyweight,GIDStats.com,https://gidstats.com/fighters/jasmine_jasudavicius.html,2026-07-22
+155,Tracy Cortez,,USA,Women's Flyweight,,,Orthodox,,12,3,0,0,1,1,10,6.0,,,,10.0,,,2.5,,,#9 Women's Flyweight,GIDStats.com,https://gidstats.com/fighters/tracy_cortez.html,2026-07-22
+156,Karine Silva,,Brazil,Women's Flyweight,,,Orthodox,,19,6,0,0,5,8,2,,,,,1.0,,,1.0,,,#10 Women's Flyweight,GIDStats.com,https://gidstats.com/fighters/karine_silva.html,2026-07-22
+157,Miranda Maverick,,USA,Women's Flyweight,,,Orthodox,,15,6,0,0,1,8,8,4.0,,,,,,,2.2,,,#11 Women's Flyweight,GIDStats.com,https://gidstats.com/fighters/miranda_maverick.html,2026-07-22
+158,Cong Wang,,China,Women's Flyweight,,,Southpaw,,9,1,0,0,2,2,6,,,,,,,,,,,#12 Women's Flyweight,GIDStats.com,https://gidstats.com/fighters/cong_wang.html,2026-07-22
+159,Casey O'Neill,,Scotland,Women's Flyweight,,,Orthodox,,11,2,0,0,3,2,5,6.0,,,,8.0,,,2.0,,,#13 Women's Flyweight,GIDStats.com,https://gidstats.com/fighters/oneill_casey.html,2026-07-22
+160,Eduarda Moura,,Brazil,Women's Flyweight,,,Orthodox,,12,2,0,0,4,5,3,,,,,,,,,,,#14 Women's Flyweight,GIDStats.com,https://gidstats.com/fighters/eduarda_moura.html,2026-07-22
+161,Gabriella Fernandes,,Brazil,Women's Flyweight,,,Southpaw,,11,4,0,0,1,4,5,3.0,,,,,,,,,,#15 Women's Flyweight,GIDStats.com,https://gidstats.com/fighters/gabriella_hermgenes.html,2026-07-22
+162,JJ Aldrich,,USA,Women's Flyweight,,,Southpaw,,14,7,0,0,3,0,12,3.0,,,,9.0,,,,,,#16 Women's Flyweight,GIDStats.com,https://gidstats.com/fighters/jj_aldrich.html,2026-07-22
+163,Norma Dumont,,Brazil,Women's Bantamweight,,,Switch,,13,2,0,0,0,2,11,4.0,,,,7.0,,,,,,#4 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/norma_dumont.html,2026-07-22
+164,Ketlen Vieira,,Brazil,Women's Bantamweight,,,Orthodox,,15,5,0,0,1,1,8,4.0,,,,,,,1.4,,,#5 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/ketlen_vieira.html,2026-07-22
+165,Yana Santos,,Russia,Women's Bantamweight,,,Orthodox,,17,8,0,0,4,1,9,6.0,,,,8.0,,,1.1,,,#6 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/yana_kunitskaya.html,2026-07-22
+166,Irene Aldana,,Mexico,Women's Bantamweight,,,Orthodox,,15,8,0,0,6,2,4,5.0,,,,2.0,,,0.2,,,#7 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/irene_aldana.html,2026-07-22
+167,Ailin Perez,,Argentina,Women's Bantamweight,,,Switch,,13,2,0,0,4,2,7,3.0,,,,1.0,,,,,,#8 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/ailin_perez.html,2026-07-22
+168,Macy Chiasson,,USA,Women's Bantamweight,,,Switch,,10,6,0,0,5,3,4,7.0,,,,,,,1.6,,,#9 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/macy_chiasson.html,2026-07-22
+169,Karol Rosa,,Brazil,Women's Bantamweight,,,Orthodox,,19,8,0,0,4,2,11,5.0,,,,10.0,,,,,,#10 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/karol_rosa.html,2026-07-22
+170,Jacqueline Cavalcanti,,Portugal,Women's Bantamweight,,,Orthodox,,10,1,0,0,2,0,7,,,,,,,,,,,#11 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/jacqueline_cavalcanti.html,2026-07-22
+171,Joselyne Edwards,,Panama,Women's Bantamweight,,,Orthodox,,17,6,0,0,6,5,5,4.0,,,,2.0,,,0.4,,,#12 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/edwards_joselyne.html,2026-07-22
+172,Mayra Bueno Silva,,Brazil,Women's Bantamweight,,,Orthodox,,10,6,1,0,1,6,2,6.0,,,,2.0,,,0.3,,,#13 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/mayra_bueno_silva.html,2026-07-22
+173,Nora Cornolle,,France,Women's Bantamweight,,,Orthodox,,9,4,0,0,6,2,1,,,,,,,,,,,#14 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/nora_cornolle.html,2026-07-22
+174,Miesha Tate,,USA,Women's Bantamweight,,,Orthodox,,20,10,0,0,3,5,7,4.0,,,,,,,1.2,,,#15 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/miesha_tate.html,2026-07-22
+175,Luana Santos,,Brazil,Women's Bantamweight,,,Orthodox,,11,2,0,0,1,5,5,,,,,,,,,,,#16 Women's Bantamweight,GIDStats.com,https://gidstats.com/fighters/luana_santos.html,2026-07-22
