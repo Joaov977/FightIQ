@@ -8,3 +8,10 @@
 2026-07-21 11:34:54 | INFO     | database | Banco populado com 174 lutadores a partir de C:\Users\joaov\OneDrive\Área de Trabalho\dev\claude\FightIQ\assets\data\fighters_seed.csv
 2026-07-21 11:35:56 | INFO     | database | Banco de dados já populado; seed ignorado.
 2026-07-21 11:35:58 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-21 16:33:35 | INFO     | database | Banco de dados já populado; seed ignorado.
+2026-07-21 16:33:37 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-21 17:49:47 | INFO     | database | Banco de dados já populado; seed ignorado.
+2026-07-21 17:49:49 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-22 10:47:05 | INFO     | database | Banco de dados já populado; seed ignorado.
+2026-07-22 10:47:07 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-22 10:51:18 | INFO     | analysis | Comparação gerada: Aiemann Zahabi vs Ailin Perez (4 destaques)

@@ -105,6 +105,29 @@ implementar a chamada real dentro desse módulo.
 
 ---
 
+## 🔍 Auditoria de qualidade de dados (v1.1)
+
+Depois da primeira coleta em escala (~175 lutadores via
+`scripts/scrape_gidstats.py`), uma auditoria encontrou inconsistências
+(idade "-1", categorias faltando, altura/alcance trocados). As causas e
+correções estão documentadas nos comentários de `data_quality.py` e no
+cabeçalho de `scripts/scrape_gidstats.py`. Resumo:
+
+| Problema | Causa raiz | Correção |
+|---|---|---|
+| Idade `-1` | Regex de data de nascimento pegava a **primeira data solta na página** (podia ser data de evento futuro) | Agora só aceita data ancorada a um rótulo real (Born/DOB); e `data_quality.py` descarta qualquer idade fora de 17–60 anos como camada extra de segurança |
+| Categoria "N/D" | Regex exigia grafia e posicionamento exatos no texto da página individual | Categoria agora vem da **página de rankings** (fonte estruturada), com a página individual como fallback |
+| Altura/alcance ausentes ou trocados | Regex de altura não tinha âncora ao rótulo "Height" — podia pegar o valor de "Reach" por engano | Ambos os regex agora são ancorados ao próprio rótulo; adicionado fallback para valores em metros |
+| Vitórias por finalização/decisão zeradas | Regex não aceitava a forma plural ("Submissions", "Decisions") | Corrigido para aceitar singular e plural |
+
+Toda linha, seja vinda do scraper ou de edição manual do CSV, passa por
+`data_quality.sanitize_fighter_dict()` antes de entrar no banco — uma
+segunda camada de defesa que descarta valores fisicamente implausíveis
+(idade negativa, altura de 30cm, percentual de 140%, etc.) em vez de
+gravá-los. Rode com `--inspect <slug>` para ver exatamente o que foi
+extraído e o que a validação ajustou/descartou para um lutador
+específico.
+
 ## 🏗️ Arquitetura
 
 ```
@@ -115,8 +138,11 @@ FightIQ/
 ├── database.py       # Camada SQLite: schema, seed, favoritos, histórico
 ├── analysis.py        # Motor de comparação e geração da "Análise Inteligente"
 ├── charts.py          # Geração de gráficos (radar, barras, pizza) com Matplotlib
+├── data_quality.py    # Validação/normalização de dados (usado pelo scraper e pelo banco)
 ├── models.py           # Dataclasses do domínio (Fighter, FighterStats, etc.)
 ├── utils.py             # Logging, tema visual, formatação
+├── scripts/
+│   └── scrape_gidstats.py  # Coletor real de dados em escala (roda localmente)
 ├── requirements.txt
 ├── assets/data/          # CSV de dados reais (seed do banco)
 ├── database/              # Banco SQLite (gerado na primeira execução)

@@ -26,6 +26,7 @@ from datetime import datetime
 from typing import Iterator, List, Optional
 
 from models import Fighter, FighterStats, FavoriteEntry, SearchHistoryEntry
+from data_quality import sanitize_fighter_dict, describe_sanitization
 from utils import DATABASE_PATH, SEED_CSV_PATH, get_logger, parse_iso_date
 
 logger = get_logger(__name__)
@@ -157,6 +158,24 @@ class DatabaseManager:
         except FileNotFoundError:
             logger.warning("CSV de seed não encontrado em %s; banco iniciará vazio.", self.seed_csv)
             return
+
+        # Segunda camada de defesa: mesmo que o CSV tenha sido editado à
+        # mão, gerado por outra fonte, ou o scraper tenha uma falha não
+        # prevista, cada linha passa pela validação de sanidade antes de
+        # entrar no banco (idade implausível, altura fora da faixa
+        # humana, percentuais >100%, etc. viram None em vez de serem
+        # gravados como estão).
+        sanitized_rows = []
+        for row in rows:
+            clean_row = sanitize_fighter_dict(row)
+            descriptions = describe_sanitization(row, clean_row)
+            if descriptions:
+                logger.warning(
+                    "Validação de sanidade ajustou campo(s) de '%s': %s",
+                    row.get("name", "?"), "; ".join(descriptions),
+                )
+            sanitized_rows.append(clean_row)
+        rows = sanitized_rows
 
         with self._connect() as conn:
             for row in rows:
