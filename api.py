@@ -54,7 +54,7 @@ class FighterUpdatePayload:
     diretamente pelo DatabaseManager sem transformação adicional.
     """
 
-    fighter_id: int
+    fighter_id: str  # slug estável, ex.: 'jon_jones'
     name: str
     nickname: Optional[str] = None
     nationality: Optional[str] = None

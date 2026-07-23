@@ -156,7 +156,7 @@ class FightIQApp(ctk.CTk):
         page.tkraise()
         self._current_page = key
 
-    def open_fighter_profile(self, fighter_id: int) -> None:
+    def open_fighter_profile(self, fighter_id: str) -> None:
         """Atalho usado por outras páginas para abrir um lutador na busca."""
         self.show_page("search", fighter_id=fighter_id)
 
@@ -330,7 +330,7 @@ class SearchPage(ctk.CTkFrame):
         self.profile_frame.grid(row=0, column=1, sticky="nsew")
         self._render_empty_profile()
 
-    def on_show(self, fighter_id: Optional[int] = None, **kwargs) -> None:
+    def on_show(self, fighter_id: Optional[str] = None, **kwargs) -> None:
         if fighter_id is not None:
             fighter = self.app.db.get_fighter(fighter_id)
             if fighter:
@@ -416,11 +416,11 @@ class SearchPage(ctk.CTkFrame):
         ctk.CTkLabel(bio_card, text="Dados Biográficos", font=(Theme.FONT_FAMILY_BOLD, 13, "bold"),
                      text_color=Theme.TEXT_PRIMARY, anchor="w").pack(fill="x", padx=16, pady=(14, 6))
         bio_rows = [
-            ("Idade", f"{fighter.age} anos" if fighter.age else "N/D"),
+            ("Idade", (f"{fighter.age} anos*" if fighter.age_is_estimated else f"{fighter.age} anos") if fighter.age else "N/D"),
             ("Nacionalidade", fighter.nationality or "N/D"),
             ("Categoria", fighter.weight_class or "N/D"),
-            ("Altura", fighter.height_display),
-            ("Alcance", fighter.reach_display),
+            ("Altura", f"{fighter.height_display_metric} ({fighter.height_display})"),
+            ("Alcance", f"{fighter.reach_display_metric} ({fighter.reach_display})"),
             ("Postura", fighter.stance or "N/D"),
             ("Vitórias", str(fighter.wins)),
             ("Derrotas", str(fighter.losses)),
@@ -459,6 +459,21 @@ class SearchPage(ctk.CTkFrame):
                 self.profile_frame,
                 text="⚠ Dados ainda não disponíveis nesta base para: " + ", ".join(missing),
                 text_color=Theme.WARNING, font=(Theme.FONT_FAMILY, 10), wraplength=520, justify="left",
+            ).pack(anchor="w", padx=28, pady=(0, 6))
+
+        if fighter.age_is_estimated:
+            ctk.CTkLabel(
+                self.profile_frame,
+                text="* idade informada diretamente pela fonte (sem data de nascimento exata); "
+                     "pode estar até 1 ano desatualizada.",
+                text_color=Theme.TEXT_MUTED, font=(Theme.FONT_FAMILY, 10), wraplength=520, justify="left",
+            ).pack(anchor="w", padx=28, pady=(0, 6))
+
+        if fighter.manually_overridden_fields:
+            ctk.CTkLabel(
+                self.profile_frame,
+                text="✏️ Campos verificados manualmente: " + fighter.manually_overridden_fields,
+                text_color=Theme.INFO, font=(Theme.FONT_FAMILY, 10), wraplength=520, justify="left",
             ).pack(anchor="w", padx=28, pady=(0, 6))
 
         if fighter.source:
@@ -512,7 +527,7 @@ class ComparePage(ctk.CTkFrame):
         self.result_container = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self.result_container.pack(fill="both", expand=True, padx=36, pady=(0, 24))
 
-        self._fighter_map: dict[str, int] = {}
+        self._fighter_map: dict[str, str] = {}
 
     def on_show(self, **kwargs) -> None:
         fighters = self.app.db.list_all_fighters()
@@ -612,9 +627,9 @@ class ComparePage(ctk.CTkFrame):
         ctk.CTkLabel(card, text=fighter.record_display, text_color=Theme.ACCENT,
                      font=(Theme.FONT_FAMILY, 13, "bold")).pack(pady=(0, 10))
         rows = [
-            ("Altura", fighter.height_display),
-            ("Alcance", fighter.reach_display),
-            ("Idade", f"{fighter.age} anos" if fighter.age else "N/D"),
+            ("Altura", f"{fighter.height_display_metric} ({fighter.height_display})"),
+            ("Alcance", f"{fighter.reach_display_metric} ({fighter.reach_display})"),
+            ("Idade", (f"{fighter.age} anos*" if fighter.age_is_estimated else f"{fighter.age} anos") if fighter.age else "N/D"),
             ("SLpM", safe_number(stats.slpm)),
             ("Defesa de Quedas", safe_percent(stats.td_def_pct)),
         ]
@@ -645,7 +660,7 @@ class DashboardPage(ctk.CTkFrame):
         self.content = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self.content.pack(fill="both", expand=True, padx=36, pady=(0, 24))
 
-        self._fighter_map: dict[str, int] = {}
+        self._fighter_map: dict[str, str] = {}
 
     def on_show(self, **kwargs) -> None:
         fighters = self.app.db.list_all_fighters()
@@ -728,7 +743,7 @@ class FavoritesPage(ctk.CTkFrame):
                           command=lambda fid=fav.fighter_id: self._remove(fid)
                           ).pack(side="right", padx=8, pady=8)
 
-    def _remove(self, fighter_id: int) -> None:
+    def _remove(self, fighter_id: str) -> None:
         self.app.db.remove_favorite(fighter_id)
         self.app.notify("Favorito removido.", "info")
         self.on_show()

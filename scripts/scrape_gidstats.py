@@ -3,23 +3,28 @@ scripts/scrape_gidstats.py
 --------------------------
 Utilitário de coleta de dados em escala para o FightIQ.
 
-v1.1 — revisado após auditoria de qualidade de dados. Principais
-mudanças em relação à v1.0 (ver PR/changelog no README):
-    - A categoria de peso e o ranking agora vêm da página de rankings
-      (fonte confiável, já estruturada por categoria), em vez de serem
-      re-extraídos com regex da página individual do lutador.
-    - A data de nascimento só é aceita se vier ancorada a um rótulo
-      real (Born/DOB/Date of birth) — nunca mais pega "a primeira data
-      solta que aparecer na página" (causa raiz do bug de idade "-1").
-    - Altura agora é ancorada ao rótulo "Height" (antes pegava qualquer
-      número seguido de "cm" na página, podendo roubar o valor do
-      alcance).
-    - Vitórias por finalização/decisão e no-contests agora aceitam
-      forma plural e a anotação "(N NC)" no cartel.
-    - Todo registro passa por data_quality.sanitize_fighter_dict()
-      antes de ser gravado no CSV — valores fisicamente implausíveis
-      (idade negativa, altura de 30cm, percentual de 140%, etc.) são
-      descartados (viram vazio) em vez de gravados.
+v1.2 — revisado após auditoria com dados reais da página da Miesha Tate
+(https://gidstats.com/fighters/miesha_tate.html). Principais mudanças:
+
+    - Extração de altura, alcance, idade e nacionalidade agora usa
+      NAVEGAÇÃO ESTRUTURAL na árvore do BeautifulSoup (localiza o nó de
+      texto do rótulo exato, ex. "Height", e olha os próximos nós de
+      texto NA ÁRVORE, não a distância em caracteres no texto achatado).
+      Isso resolve a causa raiz encontrada na auditoria: rótulo e valor
+      costumam estar em elementos HTML diferentes/irmãos, então um
+      regex que exige "mesma linha" nunca batia. Regex continua sendo
+      usado, mas só dentro dessa janela já localizada estruturalmente
+      — nunca mais como "ache o primeiro número na página inteira".
+    - A idade agora é capturada DIRETO do campo "Age NN" que o site
+      publica (Fighter.age_reported), em vez de depender só de uma data
+      de nascimento — a auditoria confirmou que o GIDStats não publica
+      data de nascimento em formato numérico; "Born" no site é o LOCAL
+      de nascimento, não a data.
+    - Nacionalidade agora é extraída da estrutura "Born <Cidade>, <País>"
+      (a única fonte confiável de país encontrada na página), em vez de
+      um rótulo "Country:" que nunca existiu de fato.
+    - fighter_id agora é o slug estável da URL (ex. "miesha_tate"), não
+      mais um número sequencial por ordem de coleta.
 
 Este script continua não inventando nenhum dado: campos que não batem
 com nenhum padrão, ou que falham na validação de sanidade, ficam vazios
@@ -34,7 +39,7 @@ Uso:
     python scripts/scrape_gidstats.py                    # roda tudo
     python scripts/scrape_gidstats.py --limit 20          # só os 20 primeiros
     python scripts/scrape_gidstats.py --delay 2.0         # mais devagar
-    python scripts/scrape_gidstats.py --inspect jon_jones # debug de 1 página
+    python scripts/scrape_gidstats.py --inspect miesha_tate # debug de 1 página
 
 Depois de rodar, atualize o banco com:
     python -c "from database import DatabaseManager; DatabaseManager().reseed()"
@@ -54,22 +59,20 @@ from pathlib import Path
 from typing import Optional
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString
 
-# Garante que "import data_quality" funcione mesmo rodando o script
-# de dentro da pasta scripts/ (adiciona a raiz do projeto ao sys.path).
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from data_quality import normalize_weight_class, sanitize_fighter_dict, describe_sanitization  # noqa: E402
 
 BASE_URL = "https://gidstats.com"
 RANKING_URL = f"{BASE_URL}/ranking/ufc/"
-USER_AGENT = "FightIQDataCollector/1.1 (+educational portfolio project; respects robots.txt)"
+USER_AGENT = "FightIQDataCollector/1.2 (+educational portfolio project; respects robots.txt)"
 DEFAULT_DELAY_SECONDS = 1.5
 OUTPUT_CSV = Path(__file__).resolve().parent.parent / "assets" / "data" / "fighters_seed.csv"
 
 CSV_FIELDS = [
     "fighter_id", "name", "nickname", "nationality", "weight_class",
-    "height_cm", "reach_cm", "stance", "birth_date",
+    "height_cm", "reach_cm", "stance", "birth_date", "age_reported",
     "wins", "losses", "draws", "no_contests",
     "wins_ko", "wins_sub", "wins_dec",
     "slpm", "str_acc_pct", "sapm", "str_def_pct",
@@ -77,10 +80,6 @@ CSV_FIELDS = [
     "image_url", "ranking", "source", "source_url", "last_updated",
 ]
 
-# Ordem em que as categorias costumam aparecer em páginas de rankings.
-# Usado tanto para achar os cabeçalhos de seção na página de rankings
-# quanto para reconhecer a categoria dentro do texto da página do lutador
-# (como fallback, caso a categoria não tenha sido resolvida via rankings).
 WEIGHT_CLASS_ORDER = [
     "Women's Strawweight", "Women's Flyweight", "Women's Bantamweight",
     "Women's Featherweight", "Flyweight", "Bantamweight", "Featherweight",
@@ -91,7 +90,6 @@ WEIGHT_CLASS_ORDER = [
 
 @dataclass
 class RankingEntry:
-    """Uma entrada da página de rankings: nome, categoria e posição."""
     name: str
     weight_class: str
     rank: int
@@ -99,6 +97,7 @@ class RankingEntry:
 
 @dataclass
 class ScrapedFighter:
+    fighter_id: str
     name: str
     source_url: str
     nickname: Optional[str] = None
@@ -109,6 +108,7 @@ class ScrapedFighter:
     reach_cm: Optional[float] = None
     stance: Optional[str] = None
     birth_date: Optional[str] = None
+    age_reported: Optional[int] = None
     wins: Optional[int] = None
     losses: Optional[int] = None
     draws: Optional[int] = None
@@ -127,11 +127,15 @@ class ScrapedFighter:
     avg_fight_time: Optional[str] = None
 
 
+def slug_from_url(url: str) -> str:
+    """Extrai o slug estável de uma URL de lutador (ex.: 'miesha_tate')."""
+    return url.rstrip("/").split("/")[-1].removesuffix(".html")
+
+
 # --------------------------------------------------------------------------
 # Etiqueta de scraping
 # --------------------------------------------------------------------------
 def check_robots_allowed(paths: list[str]) -> bool:
-    """Verifica no robots.txt do site se os caminhos usados são permitidos."""
     parser = urllib.robotparser.RobotFileParser()
     parser.set_url(f"{BASE_URL}/robots.txt")
     try:
@@ -153,23 +157,6 @@ def check_robots_allowed(paths: list[str]) -> bool:
 # Coleta da página de rankings (fonte confiável de categoria + posição)
 # --------------------------------------------------------------------------
 def fetch_ranking_entries(session: requests.Session) -> dict[str, RankingEntry]:
-    """
-    Lê a página de rankings e devolve um dicionário {url: RankingEntry}.
-
-    Estratégia: percorre o HTML bruto em ordem de aparição, alternando
-    entre "encontrei um cabeçalho de categoria" e "encontrei um link de
-    lutador". Cada link é associado à categoria do cabeçalho mais
-    recente visto antes dele, com a posição (rank) sendo a ordem dentro
-    daquela seção. Isso evita ter que adivinhar a categoria a partir da
-    página individual do lutador — usamos a estrutura que o próprio
-    site já usa para organizar os rankings.
-
-    Heurística baseada em posição textual: como não temos acesso à
-    árvore DOM real do site neste ambiente de desenvolvimento, isso foi
-    validado contra uma reconstrução do formato observado, não contra o
-    HTML ao vivo. Se a extração vier vazia ou estranha, rode com
-    --inspect e me avise para ajustar os padrões.
-    """
     response = session.get(RANKING_URL, timeout=15)
     response.raise_for_status()
     html = response.text
@@ -197,22 +184,107 @@ def fetch_ranking_entries(session: requests.Session) -> dict[str, RankingEntry]:
     for _, kind, payload in events:
         if kind == "heading":
             normalized = normalize_weight_class(payload)
-            # "Pound-for-Pound" não é uma categoria de peso de verdade —
-            # ignoramos como categoria (fica None) para não sobrescrever
-            # a categoria real do lutador com isso.
             current_class = normalized if normalized and "pound" not in normalized.lower() else None
             rank_counter = 0
             continue
-
         if current_class is None:
             continue
         url_path, name = payload
         full_url = BASE_URL + url_path
         rank_counter += 1
-        if full_url not in entries:  # primeira aparição = ranking "principal" do lutador
+        if full_url not in entries:
             entries[full_url] = RankingEntry(name=name.strip(), weight_class=current_class, rank=rank_counter)
 
     return entries
+
+
+# --------------------------------------------------------------------------
+# Navegação ESTRUTURAL (BeautifulSoup) para localizar rótulo -> valor
+# --------------------------------------------------------------------------
+def _find_label_context(soup: BeautifulSoup, label: str, window: int = 6) -> Optional[str]:
+    """
+    Localiza, na ÁRVORE do documento (não no texto achatado), o nó cujo
+    texto é exatamente `label` (ignorando espaços/case), e devolve os
+    próximos `window` nós de texto seguintes NA ORDEM DO DOCUMENTO,
+    concatenados.
+
+    Essa é a técnica estrutural pedida: em vez de assumir que rótulo e
+    valor estão na mesma linha de um texto já achatado (o que causava o
+    bug de altura/alcance ausentes), seguimos a ordem real dos nós de
+    texto do HTML — o valor de "Height" está, estruturalmente, sempre
+    logo depois do nó "Height", esteja ele no mesmo elemento ou não.
+
+    Regex ainda é usado, mas só para extrair o número de dentro dessa
+    janela já localizada pela estrutura — não mais como busca livre na
+    página inteira.
+    """
+    label_re = re.compile(rf"^\s*{re.escape(label)}\s*$", re.IGNORECASE)
+    label_node = soup.find(string=label_re)
+    if label_node is None:
+        return None
+
+    collected = []
+    node = label_node
+    for _ in range(window):
+        node = node.find_next(string=True)
+        if node is None:
+            break
+        text = str(node).strip()
+        if text:
+            collected.append(text)
+
+    return " ".join(collected) if collected else None
+
+
+def _extract_cm(context: Optional[str]) -> Optional[float]:
+    """Extrai o valor em cm de uma janela de texto já localizada estruturalmente."""
+    if not context:
+        return None
+    match = re.search(r"(\d+(?:\.\d+)?)\s*cm", context, re.IGNORECASE)
+    if match:
+        return float(match.group(1))
+    # Fallback: valor em metros (ex.: "1.93 m")
+    match_m = re.search(r"(\d\.\d{1,2})\s*m\b", context, re.IGNORECASE)
+    return round(float(match_m.group(1)) * 100, 1) if match_m else None
+
+
+def extract_height_cm(soup: BeautifulSoup) -> Optional[float]:
+    return _extract_cm(_find_label_context(soup, "Height"))
+
+
+def extract_reach_cm(soup: BeautifulSoup) -> Optional[float]:
+    # Busca a string EXATA "Reach" (não "Leg Reach") — find(string=regex)
+    # com "^...$" já garante isso, ao contrário de um regex de texto livre.
+    return _extract_cm(_find_label_context(soup, "Reach"))
+
+
+def extract_age_reported(soup: BeautifulSoup, full_text: str) -> Optional[int]:
+    """
+    Extrai a idade diretamente do campo "Age NN" do GIDStats (não deriva
+    de data de nascimento — o site não publica uma). Tenta localizar
+    estruturalmente primeiro; cai para regex no texto completo como
+    fallback, já que "Age" às vezes aparece colado a outro texto no
+    mesmo nó (ex.: "(W-L-D) Age 39") em vez de isolado num nó próprio.
+    """
+    context = _find_label_context(soup, "Age")
+    if context:
+        match = re.search(r"(\d{1,3})", context)
+        if match:
+            return int(match.group(1))
+    # Fallback: regex no texto completo (rótulo pode não estar isolado num nó)
+    match = re.search(r"\bAge\s+(\d{1,3})\b", full_text, re.IGNORECASE)
+    return int(match.group(1)) if match else None
+
+
+def extract_nationality(full_text: str) -> Optional[str]:
+    """
+    A página não tem um rótulo "Country:"; a única fonte confiável de
+    país observada na auditoria é o campo "Born <Cidade>, <País>" (que é
+    o LOCAL de nascimento, não uma data). Extrai o texto depois da
+    última vírgula desse campo.
+    """
+    match = re.search(r"\bBorn\s+[^\n,]+,\s*([A-Za-z .]+)", full_text)
+    return match.group(1).strip() if match else None
 
 
 # --------------------------------------------------------------------------
@@ -241,38 +313,15 @@ def _to_int(value: Optional[str]) -> Optional[int]:
         return None
 
 
-def _parse_anchored_date(text: str) -> Optional[str]:
-    """
-    Extrai a data de nascimento SOMENTE se estiver ancorada a um rótulo
-    real (Born / DOB / Date of birth). Correção direta do bug de idade
-    "-1": a versão anterior pegava a primeira data solta na página
-    (podendo ser data de evento, não de nascimento). Se não achar o
-    rótulo, devolve None em vez de arriscar um "melhor palpite".
-    """
-    match = re.search(
-        r"(?:date of birth|born|dob)[:\s]*"
-        r"(\d{1,2})[./](\d{1,2})[./](\d{2,4})",
-        text, re.IGNORECASE,
-    )
-    if not match:
-        return None
-    d, m, y = match.groups()
-    y = ("19" + y) if len(y) == 2 and int(y) > 30 else (("20" + y) if len(y) == 2 else y)
-    try:
-        return date(int(y), int(m), int(d)).isoformat()
-    except ValueError:
-        return None
-
-
 def parse_fighter_page(html: str, url: str,
                         ranking_hint: Optional[RankingEntry] = None) -> Optional[ScrapedFighter]:
     """
     Extrai os campos reais de uma página de lutador do GIDStats.
 
-    `ranking_hint`, quando fornecido (vindo de fetch_ranking_entries),
-    tem prioridade sobre qualquer extração de categoria feita aqui —
-    a página de rankings é uma fonte mais confiável para esse campo
-    específico do que tentar re-extrair da página individual.
+    Altura, alcance, idade e nacionalidade usam navegação estrutural
+    (ver funções extract_* acima). Os demais campos (cartel, golpes,
+    quedas) seguem usando regex sobre o texto achatado, já validados
+    contra o texto real da página da Miesha Tate durante a auditoria.
     """
     soup = BeautifulSoup(html, "html.parser")
     text = soup.get_text("\n", strip=True)
@@ -282,20 +331,13 @@ def parse_fighter_page(html: str, url: str,
     if not name:
         return None
 
-    height_cm = _to_float(_search(r"height[^\n]*?(\d+(?:\.\d+)?)\s*cm", text))
-    if height_cm is None:
-        # fallback: altura em metros (ex.: "1.93 m")
-        h_m = _to_float(_search(r"height[^\n]*?(\d\.\d{1,2})\s*m\b", text))
-        height_cm = round(h_m * 100, 1) if h_m else None
+    fighter_id = slug_from_url(url)
 
-    reach_cm = _to_float(_search(r"reach[^\n]*?(\d+(?:\.\d+)?)\s*cm", text))
-    if reach_cm is None:
-        r_m = _to_float(_search(r"reach[^\n]*?(\d\.\d{1,2})\s*m\b", text))
-        reach_cm = round(r_m * 100, 1) if r_m else None
+    height_cm = extract_height_cm(soup)
+    reach_cm = extract_reach_cm(soup)
+    age_reported = extract_age_reported(soup, text)
+    nationality = extract_nationality(text)
 
-    # Categoria: prioridade absoluta para o dado vindo da página de
-    # rankings (mais confiável). Só tenta extrair da página individual
-    # se não veio nenhuma dica de fora.
     if ranking_hint:
         weight_class = ranking_hint.weight_class
         ranking = f"#{ranking_hint.rank} {ranking_hint.weight_class}"
@@ -308,18 +350,28 @@ def parse_fighter_page(html: str, url: str,
         ranking = None
 
     stance = _search(r"stance[:\s]+([A-Za-z\-]+)", text)
-    nationality = _search(r"country[:\s]+([A-Za-z .]+)", text)
-    birth_date = _parse_anchored_date(text)
+
+    # A página não publica data de nascimento em formato numérico (só
+    # local de nascimento + idade já calculada) — mas deixamos o regex
+    # ancorado como tentativa honesta, caso o layout mude no futuro ou
+    # outro lutador tenha uma variação de página com DOB de verdade.
+    birth_date = None
+    dob_match = re.search(
+        r"(?:date of birth|dob)[:\s]*(\d{1,2})[./](\d{1,2})[./](\d{2,4})", text, re.IGNORECASE,
+    )
+    if dob_match:
+        d, m, y = dob_match.groups()
+        y = ("19" + y) if len(y) == 2 and int(y) > 30 else (("20" + y) if len(y) == 2 else y)
+        try:
+            birth_date = date(int(y), int(m), int(d)).isoformat()
+        except ValueError:
+            birth_date = None
 
     record_match = re.search(r"(\d+)\s*-\s*(\d+)\s*-\s*(\d+)", text)
     wins = _to_int(record_match.group(1)) if record_match else None
     losses = _to_int(record_match.group(2)) if record_match else None
     draws = _to_int(record_match.group(3)) if record_match else None
 
-    # "(N NC)" só aparece anotado no cartel quando existe pelo menos um
-    # no-contest — convenção comum em sites de estatísticas de MMA.
-    # Na ausência dessa anotação, assumimos 0 (não None): é uma leitura
-    # direta da convenção de formatação da fonte, não uma estimativa.
     nc_match = re.search(r"\(\s*(\d+)\s*NC\s*\)", text, re.IGNORECASE)
     no_contests = _to_int(nc_match.group(1)) if nc_match else 0
 
@@ -339,9 +391,10 @@ def parse_fighter_page(html: str, url: str,
     avg_fight_time = _search(r"[Aa]verage fight time[:\s]+(\d{1,2}:\d{2})", text)
 
     return ScrapedFighter(
-        name=name, source_url=url,
+        fighter_id=fighter_id, name=name, source_url=url,
         nationality=nationality, weight_class=weight_class, ranking=ranking,
-        height_cm=height_cm, reach_cm=reach_cm, stance=stance, birth_date=birth_date,
+        height_cm=height_cm, reach_cm=reach_cm, stance=stance,
+        birth_date=birth_date, age_reported=age_reported,
         wins=wins, losses=losses, draws=draws, no_contests=no_contests,
         wins_ko=wins_ko, wins_sub=wins_sub, wins_dec=wins_dec,
         slpm=slpm, str_acc_pct=str_acc, sapm=sapm, str_def_pct=str_def,
@@ -361,16 +414,16 @@ def write_csv(fighters: list[ScrapedFighter], output_path: Path) -> None:
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
         writer.writeheader()
-        for i, fighter in enumerate(fighters, start=1):
+        for fighter in fighters:
             raw_row = {f.name: getattr(fighter, f.name, None) for f in fields(ScrapedFighter)}
             clean_row = sanitize_fighter_dict(raw_row)
+            clean_row["fighter_id"] = fighter.fighter_id  # nunca sanitizar/perder o slug
 
             descriptions = describe_sanitization(raw_row, clean_row)
             if descriptions:
                 total_flags += len(descriptions)
                 print(f"  ⚠ {fighter.name}: {'; '.join(descriptions)}")
 
-            clean_row["fighter_id"] = i
             clean_row["image_url"] = None
             clean_row["source"] = "GIDStats.com"
             clean_row["last_updated"] = today
@@ -379,8 +432,7 @@ def write_csv(fighters: list[ScrapedFighter], output_path: Path) -> None:
 
     print(f"\n✅ {len(fighters)} lutadores gravados em {output_path}")
     if total_flags:
-        print(f"⚠ {total_flags} campo(s), no total, foram descartados por falharem na validação de sanidade "
-              f"(ver data_quality.py) — melhor vazio do que errado.")
+        print(f"⚠ {total_flags} campo(s), no total, foram descartados/normalizados pela validação de sanidade.")
 
 
 # --------------------------------------------------------------------------
@@ -388,12 +440,11 @@ def write_csv(fighters: list[ScrapedFighter], output_path: Path) -> None:
 # --------------------------------------------------------------------------
 def main() -> int:
     parser = argparse.ArgumentParser(description="Coletor de dados reais de lutadores (GIDStats.com)")
-    parser.add_argument("--limit", type=int, default=None, help="Limita o número de lutadores coletados")
-    parser.add_argument("--delay", type=float, default=DEFAULT_DELAY_SECONDS,
-                         help="Segundos de espera entre requisições (padrão: 1.5)")
-    parser.add_argument("--output", type=Path, default=OUTPUT_CSV, help="Caminho do CSV de saída")
+    parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--delay", type=float, default=DEFAULT_DELAY_SECONDS)
+    parser.add_argument("--output", type=Path, default=OUTPUT_CSV)
     parser.add_argument("--inspect", type=str, default=None,
-                         help="Modo debug: mostra os campos extraídos de um único lutador (slug, ex.: jon_jones)")
+                         help="Modo debug: mostra os 5 estágios de extração de um lutador (slug, ex.: miesha_tate)")
     args = parser.parse_args()
 
     session = requests.Session()
@@ -405,20 +456,29 @@ def main() -> int:
         response = session.get(url, timeout=15)
         response.raise_for_status()
         fighter = parse_fighter_page(response.text, url)
-        print("\n--- Campos extraídos (antes da validação de sanidade) ---")
+
+        print("\n--- Estágio 1: valor bruto extraído (parsing) ---")
         print(fighter)
+
         if fighter:
             raw_row = {f.name: getattr(fighter, f.name, None) for f in fields(ScrapedFighter)}
             clean_row = sanitize_fighter_dict(raw_row)
+            clean_row["fighter_id"] = fighter.fighter_id
             descriptions = describe_sanitization(raw_row, clean_row)
-            print("\n--- Após validação de sanidade ---")
+
+            print("\n--- Estágio 2: após validação de sanidade (data_quality.py) ---")
             print(clean_row)
             if descriptions:
                 print(f"\n⚠ Ajustes da validação: {'; '.join(descriptions)}")
+
+            print("\n--- Estágios 3-5 (CSV -> banco) ---")
+            print("Rode 'python scripts/scrape_gidstats.py' (sem --inspect) pra gravar no CSV,")
+            print("depois 'DatabaseManager().reseed()' e confira com db.get_fighter(fighter_id)")
+            print(f"pra comparar com os estágios acima. fighter_id = {fighter.fighter_id!r}")
         return 0
 
     print("Verificando robots.txt do GIDStats.com...")
-    if not check_robots_allowed(["/ranking/ufc/", "/fighters/jon_jones.html"]):
+    if not check_robots_allowed(["/ranking/ufc/", "/fighters/miesha_tate.html"]):
         print("\n❌ O robots.txt não permite a coleta nesses caminhos. Abortando.")
         return 1
 
@@ -437,7 +497,8 @@ def main() -> int:
             fighter = parse_fighter_page(response.text, url, ranking_hint=ranking_entries.get(url))
             if fighter:
                 results.append(fighter)
-                print(f"[{i}/{len(fighter_urls)}] OK: {fighter.name} ({fighter.weight_class or 'categoria N/D'})")
+                print(f"[{i}/{len(fighter_urls)}] OK: {fighter.name} "
+                      f"({fighter.weight_class or 'categoria N/D'}, id={fighter.fighter_id})")
             else:
                 print(f"[{i}/{len(fighter_urls)}] ⚠ Não foi possível extrair dados de {url}")
         except requests.RequestException as exc:

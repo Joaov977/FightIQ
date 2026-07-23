@@ -83,10 +83,22 @@ python scripts/scrape_gidstats.py --limit 20
 
 # Coleta todo mundo listado nos rankings (pode levar alguns minutos)
 python scripts/scrape_gidstats.py
+```
 
-# Depois, carregue os dados coletados no banco:
+**Depois de coletar, carregue os dados no banco** — este é o comando
+canônico, funciona tanto numa instalação nova (banco ainda nem existe)
+quanto para atualizar um banco já existente:
+
+```bash
 python -c "from database import DatabaseManager; DatabaseManager().reseed()"
 ```
+
+`reseed()` garante o schema do banco antes de fazer qualquer outra coisa,
+então é seguro rodá-lo como o primeiro comando depois do scraper, mesmo em
+um clone limpo do repositório — não é necessário rodar nenhum outro passo
+"oculto" antes. (`python main.py` também inicializa o banco sozinho, via
+`DatabaseManager().initialize()`, caso você só queira abrir o app sem
+recoletar nada.)
 
 **Nota de qualidade:** os padrões (regex) de extração foram validados contra
 uma amostra sintética que reproduz o formato de texto observado nas páginas
@@ -105,28 +117,90 @@ implementar a chamada real dentro desse módulo.
 
 ---
 
-## 🔍 Auditoria de qualidade de dados (v1.1)
+## 🔍 Auditoria de qualidade de dados (v1.2 — investigação com dados reais)
 
-Depois da primeira coleta em escala (~175 lutadores via
-`scripts/scrape_gidstats.py`), uma auditoria encontrou inconsistências
-(idade "-1", categorias faltando, altura/alcance trocados). As causas e
-correções estão documentadas nos comentários de `data_quality.py` e no
-cabeçalho de `scripts/scrape_gidstats.py`. Resumo:
+Depois da v1.1, uma segunda rodada de auditoria usou o texto **real** da
+página `gidstats.com/fighters/miesha_tate.html` (obtido via busca na web)
+para localizar a causa raiz exata de cada campo perdido — em vez de
+corrigir por tentativa e erro. Principais descobertas e mudanças:
 
-| Problema | Causa raiz | Correção |
+| Campo | O que a investigação encontrou | Correção |
 |---|---|---|
-| Idade `-1` | Regex de data de nascimento pegava a **primeira data solta na página** (podia ser data de evento futuro) | Agora só aceita data ancorada a um rótulo real (Born/DOB); e `data_quality.py` descarta qualquer idade fora de 17–60 anos como camada extra de segurança |
-| Categoria "N/D" | Regex exigia grafia e posicionamento exatos no texto da página individual | Categoria agora vem da **página de rankings** (fonte estruturada), com a página individual como fallback |
-| Altura/alcance ausentes ou trocados | Regex de altura não tinha âncora ao rótulo "Height" — podia pegar o valor de "Reach" por engano | Ambos os regex agora são ancorados ao próprio rótulo; adicionado fallback para valores em metros |
-| Vitórias por finalização/decisão zeradas | Regex não aceitava a forma plural ("Submissions", "Decisions") | Corrigido para aceitar singular e plural |
+| Idade | O site **não publica data de nascimento** em formato numérico — só uma idade já calculada (`"Age 39"`) e o **local** de nascimento (`"Born Tacoma, United States"`, que eu confundia com data) | `Fighter.age_reported` captura a idade direto da fonte; `Fighter.age` usa isso como *fallback* quando não há data de nascimento exata (marcado na interface com `*`) |
+| Altura / Alcance | Rótulo (`"Height"`) e valor (`"66 inch 168 cm"`) ficam em **elementos HTML diferentes** — um regex que exige "mesma linha de texto" nunca encontrava o valor | Extração agora **navega a árvore do BeautifulSoup** (localiza o nó exato do rótulo e lê os próximos nós de texto), em vez de regex sobre texto achatado |
+| Nacionalidade | Não existe rótulo `"Country:"` na página — a única fonte confiável é o país dentro do campo `"Born <Cidade>, <País>"` | Extração passou a usar esse campo |
+| "Reach" vs "Leg Reach" | Ambos aparecem na mesma página; `"Reach"` é substring de `"Leg Reach"` | Busca estrutural por **string exata** do rótulo evita a confusão (testado explicitamente) |
 
-Toda linha, seja vinda do scraper ou de edição manual do CSV, passa por
-`data_quality.sanitize_fighter_dict()` antes de entrar no banco — uma
-segunda camada de defesa que descarta valores fisicamente implausíveis
-(idade negativa, altura de 30cm, percentual de 140%, etc.) em vez de
-gravá-los. Rode com `--inspect <slug>` para ver exatamente o que foi
-extraído e o que a validação ajustou/descartou para um lutador
-específico.
+Toda essa extração estrutural, mais os 4 campos investigados, tem testes
+automatizados dedicados em `tests/test_scraper_parsing.py` — rode
+`python -m unittest discover tests -v` a qualquer momento para conferir
+que nada regrediu.
+
+## 🆔 IDs estáveis por slug
+
+`fighter_id` deixou de ser um número sequencial (atribuído pela ordem de
+aparição no scraping) e passou a ser o **slug da URL de origem** (ex.:
+`"miesha_tate"`). Isso evita que favoritos, histórico de pesquisas e
+overrides manuais fiquem apontando para o lutador errado se a posição de
+alguém no ranking mudar entre duas coletas.
+
+> ⚠️ **Se você já tinha um `database/fightiq.db` de antes da v1.2**,
+> apague o arquivo antes de rodar — o tipo da chave primária mudou
+> (era `INTEGER`, agora é `TEXT`), e `CREATE TABLE IF NOT EXISTS` não
+> migra tabelas existentes automaticamente.
+
+## ✏️ Curadoria manual (`assets/data/manual_overrides.csv`)
+
+Além da coleta automática, o FightIQ agora suporta uma camada de
+correções manuais — útil para os poucos casos em que você (que acompanha
+o UFC de perto) sabe que um dado está errado ou ausente e quer corrigir
+sem esperar o site de origem atualizar.
+
+**Como funciona:**
+- O arquivo fica em `assets/data/manual_overrides.csv`, separado do CSV
+  gerado pelo scraper — rodar o scraper de novo **nunca apaga** suas
+  correções.
+- Cada linha usa o `fighter_id` (slug, ex. `jon_jones`) para identificar
+  o lutador, e só as **colunas preenchidas** sobrescrevem o dado
+  correspondente — o resto do registro continua vindo do scraper.
+- Os overrides são reaplicados automaticamente toda vez que o app abre
+  (não precisa rodar `reseed()` manualmente depois de editar o arquivo).
+- Todo valor manual passa pela mesma validação de sanidade do resto do
+  pipeline (`data_quality.py`) — um erro de digitação (ex. altura de
+  "18" em vez de "180") também é pego aqui.
+- A interface mostra "✏️ Campos verificados manualmente: ..." no perfil
+  de qualquer lutador com correções, para deixar a proveniência clara.
+
+**Exemplo** — corrigindo só o alcance do Islam Makhachev, sem tocar em
+mais nada:
+
+```csv
+fighter_id,reach_cm,note
+islam_makhachev,183,alcance real conferido manualmente pelo usuário
+```
+
+(As demais colunas do arquivo podem ficar em branco — veja o cabeçalho
+completo já presente no arquivo template.)
+
+**Por que essa arquitetura, e não editar o CSV do scraper direto:** é o
+mesmo padrão usado em sistemas de dados profissionais (MDM / "golden
+records") — pipeline automático faz o volume, uma camada de curadoria
+humana clara e auditável tem a palavra final em casos específicos, sem
+que as duas coisas se misturem num único arquivo que o scraper
+sobrescreve a cada execução.
+
+## 🧪 Testes automatizados
+
+```bash
+python -m unittest discover tests -v
+```
+
+41 testes cobrindo `data_quality.py` (validação/normalização),
+`scripts/scrape_gidstats.py` (extração estrutural de idade, altura,
+alcance e nacionalidade — incluindo o caso "Reach vs Leg Reach") e
+`database.py` (IDs estáveis por slug, overrides parciais, persistência
+entre reaberturas do app). Rode isso sempre que mexer no scraper ou no
+banco, antes de considerar uma mudança pronta.
 
 ## 🏗️ Arquitetura
 
@@ -143,8 +217,9 @@ FightIQ/
 ├── utils.py             # Logging, tema visual, formatação
 ├── scripts/
 │   └── scrape_gidstats.py  # Coletor real de dados em escala (roda localmente)
+├── tests/                  # Testes automatizados (unittest)
 ├── requirements.txt
-├── assets/data/          # CSV de dados reais (seed do banco)
+├── assets/data/          # CSV de dados reais (seed do banco) + manual_overrides.csv
 ├── database/              # Banco SQLite (gerado na primeira execução)
 ├── icons/ e images/        # Recursos visuais da interface
 ```

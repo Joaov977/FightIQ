@@ -152,6 +152,21 @@ def cm_to_feet_inches(cm: Optional[float]) -> str:
     return f"{feet}'{inches}\""
 
 
+def cm_to_meters_br(cm: Optional[float]) -> str:
+    """Converte centímetros para metros no padrão brasileiro (ex.: 195 -> '1,95 m')."""
+    if cm is None:
+        return "—"
+    meters = cm / 100
+    return f"{meters:.2f} m".replace(".", ",")
+
+
+def cm_display(cm: Optional[float]) -> str:
+    """Formata centímetros como inteiro com sufixo (ex.: 195 -> '195 cm')."""
+    if cm is None:
+        return "—"
+    return f"{cm:.0f} cm"
+
+
 def format_record(wins: Optional[int], losses: Optional[int], draws: Optional[int],
                    no_contests: Optional[int] = 0) -> str:
     """Formata o cartel de um lutador no padrão V-D-E (com NC se houver)."""

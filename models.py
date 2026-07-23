@@ -23,14 +23,17 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Optional
 
-from utils import calculate_age, cm_to_feet_inches, format_record
+from utils import calculate_age, cm_to_feet_inches, cm_to_meters_br, format_record
 
 
 @dataclass
 class Fighter:
     """Representa um lutador e seus dados biográficos/cadastrais."""
 
-    fighter_id: int
+    # ID estável derivado do slug da URL de origem (ex.: "jon_jones"), não
+    # um índice sequencial — isso evita que favoritos/histórico/overrides
+    # apontem pro lutador errado se a ordem do scraping mudar entre execuções.
+    fighter_id: str
     name: str
     nickname: Optional[str] = None
     nationality: Optional[str] = None
@@ -39,6 +42,7 @@ class Fighter:
     reach_cm: Optional[float] = None
     stance: Optional[str] = None
     birth_date: Optional[date] = None
+    age_reported: Optional[int] = None  # idade publicada diretamente pela fonte (sem DOB por trás)
 
     wins: int = 0
     losses: int = 0
@@ -56,11 +60,27 @@ class Fighter:
     source: Optional[str] = None
     source_url: Optional[str] = None
     last_updated: Optional[str] = None
+    manually_overridden_fields: Optional[str] = None  # campos ajustados via manual_overrides.csv, separados por vírgula
 
     # -- Propriedades derivadas (calculadas, nunca inventadas) -----------
     @property
     def age(self) -> Optional[int]:
-        return calculate_age(self.birth_date)
+        """
+        Idade do lutador. Prioriza calcular a partir de birth_date (mais
+        preciso, dia exato); se não houver data de nascimento disponível
+        na fonte, usa age_reported — a idade publicada diretamente pela
+        fonte (caso do GIDStats.com, que mostra "Age NN" em vez de uma
+        data de nascimento). Isso é necessário porque, nesse caso, a
+        idade pode ficar até ~1 ano desatualizada entre uma coleta e
+        outra — ver `age_is_estimated` para sinalizar isso na interface.
+        """
+        computed = calculate_age(self.birth_date)
+        return computed if computed is not None else self.age_reported
+
+    @property
+    def age_is_estimated(self) -> bool:
+        """True quando a idade exibida vem de age_reported (não de birth_date exato)."""
+        return self.birth_date is None and self.age_reported is not None
 
     @property
     def height_display(self) -> str:
@@ -69,6 +89,16 @@ class Fighter:
     @property
     def reach_display(self) -> str:
         return cm_to_feet_inches(self.reach_cm)
+
+    @property
+    def height_display_metric(self) -> str:
+        """Altura em metros, padrão brasileiro (ex.: '1,93 m')."""
+        return cm_to_meters_br(self.height_cm)
+
+    @property
+    def reach_display_metric(self) -> str:
+        """Alcance em metros, padrão brasileiro (ex.: '2,15 m')."""
+        return cm_to_meters_br(self.reach_cm)
 
     @property
     def record_display(self) -> str:
@@ -103,7 +133,7 @@ class FighterStats:
     conferir/atualizar os números na fonte original.
     """
 
-    fighter_id: int
+    fighter_id: str  # mesmo slug estável usado em Fighter.fighter_id
 
     slpm: Optional[float] = None            # golpes significativos landed / min
     str_acc_pct: Optional[float] = None      # precisão de striking (%)
@@ -128,7 +158,7 @@ class FighterStats:
 class FavoriteEntry:
     """Registro de um lutador marcado como favorito pelo usuário."""
 
-    fighter_id: int
+    fighter_id: str
     name: str
     added_at: datetime = field(default_factory=datetime.now)
 
@@ -138,7 +168,7 @@ class SearchHistoryEntry:
     """Registro de uma pesquisa/consulta feita pelo usuário."""
 
     query: str
-    fighter_id: Optional[int]
+    fighter_id: Optional[str]
     searched_at: datetime = field(default_factory=datetime.now)
 
 

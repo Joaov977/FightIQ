@@ -39,7 +39,6 @@ MIN_AGE, MAX_AGE = 17, 60
 MAX_PCT = 100.0
 MAX_SLPM, MAX_SAPM = 15.0, 15.0
 MAX_TD_AVG, MAX_SUB_AVG = 12.0, 8.0
-
 # --------------------------------------------------------------------------
 # Vocabulário fixo de categorias de peso (normalização, não inferência)
 # --------------------------------------------------------------------------
@@ -105,6 +104,23 @@ def sanitize_birth_date(iso_date: Optional[str]) -> Optional[str]:
     return iso_date
 
 
+def sanitize_age_reported(value) -> Optional[int]:
+    """
+    Valida uma idade reportada diretamente pela fonte (sem data de
+    nascimento por trás) — usada como fallback quando o site só publica
+    "Age NN" em vez de uma data de nascimento parseável (caso real do
+    GIDStats.com). Mesma faixa de sanidade aplicada a idades derivadas
+    de birth_date, para consistência.
+    """
+    if value is None or value == "":
+        return None
+    try:
+        age = int(float(value))
+    except (TypeError, ValueError):
+        return None
+    return age if MIN_AGE <= age <= MAX_AGE else None
+
+
 def sanitize_range(value, min_value: float, max_value: float) -> Optional[float]:
     """Descarta um valor numérico fora de uma faixa plausível."""
     if value is None or value == "":
@@ -132,6 +148,7 @@ def sanitize_fighter_dict(row: dict) -> dict:
     row = dict(row)
 
     row["birth_date"] = sanitize_birth_date(row.get("birth_date"))
+    row["age_reported"] = sanitize_age_reported(row.get("age_reported"))
     row["height_cm"] = sanitize_range(row.get("height_cm"), MIN_HEIGHT_CM, MAX_HEIGHT_CM)
     row["reach_cm"] = sanitize_range(row.get("reach_cm"), MIN_REACH_CM, MAX_REACH_CM)
     row["weight_class"] = normalize_weight_class(row.get("weight_class"))

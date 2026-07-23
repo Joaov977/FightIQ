@@ -18,3 +18,21 @@
 2026-07-22 11:11:30 | INFO     | database | Banco populado com 175 lutadores a partir de C:\Users\joaov\OneDrive\Área de Trabalho\dev\claude\FightIQ\assets\data\fighters_seed.csv
 2026-07-22 11:11:52 | INFO     | database | Banco de dados já populado; seed ignorado.
 2026-07-22 11:11:54 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-22 11:28:33 | INFO     | database | Banco de dados já populado; seed ignorado.
+2026-07-22 11:28:35 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-22 11:48:48 | INFO     | database | Histórico de pesquisas limpo.
+2026-07-23 16:51:42 | ERROR    | database | Erro em operação de banco de dados; rollback aplicado.
+Traceback (most recent call last):
+  File "C:\Users\joaov\OneDrive\Área de Trabalho\dev\claude\FightIQ\database.py", line 159, in _connect
+    yield conn
+  File "C:\Users\joaov\OneDrive\Área de Trabalho\dev\claude\FightIQ\database.py", line 371, in reseed
+    conn.execute("DELETE FROM meta WHERE key = 'seeded'")
+sqlite3.OperationalError: no such table: meta
+2026-07-23 17:01:01 | INFO     | database | Banco populado com 3 lutadores a partir de C:\Users\joaov\OneDrive\Área de Trabalho\dev\claude\FightIQ\assets\data\fighters_seed.csv
+2026-07-23 17:01:27 | INFO     | database | Banco de dados já populado; seed automático ignorado.
+2026-07-23 17:01:28 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-23 17:17:23 | INFO     | database | Banco populado com 175 lutadores a partir de C:\Users\joaov\OneDrive\Área de Trabalho\dev\claude\FightIQ\assets\data\fighters_seed.csv
+2026-07-23 17:17:35 | INFO     | database | Banco de dados já populado; seed automático ignorado.
+2026-07-23 17:17:36 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-23 17:19:00 | INFO     | database | Banco de dados já populado; seed automático ignorado.
+2026-07-23 17:19:01 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
