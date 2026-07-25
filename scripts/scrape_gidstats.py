@@ -68,6 +68,7 @@ BASE_URL = "https://gidstats.com"
 RANKING_URL = f"{BASE_URL}/ranking/ufc/"
 USER_AGENT = "FightIQDataCollector/1.2 (+educational portfolio project; respects robots.txt)"
 DEFAULT_DELAY_SECONDS = 1.5
+MIN_EXPECTED_FIGHTERS = 150  # abaixo disso, algo está errado na extração — não é resultado normal
 OUTPUT_CSV = Path(__file__).resolve().parent.parent / "assets" / "data" / "fighters_seed.csv"
 
 CSV_FIELDS = [
@@ -156,44 +157,95 @@ def check_robots_allowed(paths: list[str]) -> bool:
 # --------------------------------------------------------------------------
 # Coleta da página de rankings (fonte confiável de categoria + posição)
 # --------------------------------------------------------------------------
-def fetch_ranking_entries(session: requests.Session) -> dict[str, RankingEntry]:
+def fetch_ranking_entries(session: requests.Session, verbose: bool = False) -> dict[str, RankingEntry]:
+    """
+    Lê a página de rankings e devolve um dicionário {url: RankingEntry}.
+
+    Com `verbose=True`, imprime contadores em cada etapa do pipeline
+    (bytes baixados, cabeçalhos de categoria encontrados, links brutos
+    para /fighters/, links válidos depois do filtro de categoria) —
+    existe especificamente para que uma regressão como "0 lutadores
+    encontrados" nunca mais precise ser diagnosticada por tentativa e
+    erro: rode com --verbose e a saída aponta exatamente em qual etapa
+    a contagem despenca.
+    """
     response = session.get(RANKING_URL, timeout=15)
+    if verbose:
+        print(f"  [diagnóstico] HTTP status: {response.status_code}")
+        print(f"  [diagnóstico] Bytes recebidos: {len(response.content)}")
     response.raise_for_status()
-    html = response.text
+    soup = BeautifulSoup(response.text, "html.parser")
 
-    heading_pattern = re.compile(
-        r">\s*(" + "|".join(re.escape(wc) for wc in WEIGHT_CLASS_ORDER) + r")\s*<",
+    if verbose:
+        looks_like_ranking_page = "ranking" in response.text.lower() and "fighters" in response.text.lower()
+        print(f"  [diagnóstico] Conteúdo parece a página de rankings? {looks_like_ranking_page}")
+        raw_fighter_links = len(re.findall(r'href="(/fighters/[^"]+\.html)"', response.text))
+        print(f"  [diagnóstico] Links brutos para /fighters/*.html no HTML (antes de qualquer filtro): "
+              f"{raw_fighter_links}")
+
+    # Remove o dropdown de filtro — fonte CONFIRMADA de contaminação
+    # (ver docstring acima). IMPORTANTE: não remover <nav> aqui — uma
+    # versão anterior removia <nav> "por precaução", sem evidência real,
+    # e isso apagava a listagem verdadeira de lutadores sempre que ela
+    # estava dentro de uma tag <nav> (comum e semanticamente correto
+    # para uma lista de rankings) — causando "0 lutadores encontrados".
+    # Só remova elementos daqui com evidência concreta de contaminação,
+    # nunca por suposição.
+    for tag in soup.select("select, option"):
+        tag.decompose()
+
+    heading_re = re.compile(
+        r"^\s*(" + "|".join(re.escape(wc) for wc in sorted(WEIGHT_CLASS_ORDER, key=len, reverse=True)) + r")\s*$",
         re.IGNORECASE,
     )
-    link_pattern = re.compile(
-        r'href="(/fighters/[^"]+\.html)"[^>]*>\s*([^<]{2,60}?)\s*<',
-        re.IGNORECASE,
-    )
-
-    events = []
-    for m in heading_pattern.finditer(html):
-        events.append((m.start(), "heading", m.group(1)))
-    for m in link_pattern.finditer(html):
-        events.append((m.start(), "link", (m.group(1), m.group(2))))
-    events.sort(key=lambda e: e[0])
 
     entries: dict[str, RankingEntry] = {}
     current_class: Optional[str] = None
     rank_counter = 0
+    headings_matched = 0
+    fighter_links_seen = 0
 
-    for _, kind, payload in events:
-        if kind == "heading":
-            normalized = normalize_weight_class(payload)
-            current_class = normalized if normalized and "pound" not in normalized.lower() else None
-            rank_counter = 0
+    # soup.descendants percorre TODOS os nós (tags E textos) na ordem real
+    # do documento — diferente da versão anterior, que checava se o nó de
+    # TEXTO tinha o <a> como pai DIRETO. Isso quebrava sempre que o nome do
+    # lutador vinha envolto em <span> aninhados dentro do <a> (confirmado
+    # como a estrutura real da página — o texto do link vem fragmentado em
+    # spans de primeiro nome / rank / nome completo). Agora tratamos cada
+    # tag <a> como uma unidade e pegamos todo o texto dela com get_text(),
+    # não importando quantos elementos estejam aninhados dentro.
+    for node in soup.descendants:
+        if isinstance(node, NavigableString):
+            text = str(node).strip()
+            if not text:
+                continue
+            heading_match = heading_re.match(text)
+            if heading_match:
+                headings_matched += 1
+                normalized = normalize_weight_class(heading_match.group(1))
+                current_class = normalized if normalized and "pound" not in normalized.lower() else None
+                rank_counter = 0
             continue
+
+        if getattr(node, "name", None) != "a":
+            continue
+        href = node.get("href", "")
+        if not (href.startswith("/fighters/") and href.endswith(".html")):
+            continue
+        fighter_links_seen += 1
         if current_class is None:
             continue
-        url_path, name = payload
-        full_url = BASE_URL + url_path
+
+        full_url = BASE_URL + href
+        if full_url in entries:
+            continue
+        name = re.sub(r"\s+", " ", node.get_text(" ", strip=True)).strip()
         rank_counter += 1
-        if full_url not in entries:
-            entries[full_url] = RankingEntry(name=name.strip(), weight_class=current_class, rank=rank_counter)
+        entries[full_url] = RankingEntry(name=name, weight_class=current_class, rank=rank_counter)
+
+    if verbose:
+        print(f"  [diagnóstico] Cabeçalhos de categoria reconhecidos (heading_re bateu): {headings_matched}")
+        print(f"  [diagnóstico] Tags <a href=\"/fighters/...\"> encontradas na árvore: {fighter_links_seen}")
+        print(f"  [diagnóstico] Lutadores únicos com categoria válida associada: {len(entries)}")
 
     return entries
 
@@ -276,15 +328,51 @@ def extract_age_reported(soup: BeautifulSoup, full_text: str) -> Optional[int]:
     return int(match.group(1)) if match else None
 
 
-def extract_nationality(full_text: str) -> Optional[str]:
+def extract_nationality(soup: BeautifulSoup) -> Optional[str]:
     """
-    A página não tem um rótulo "Country:"; a única fonte confiável de
-    país observada na auditoria é o campo "Born <Cidade>, <País>" (que é
-    o LOCAL de nascimento, não uma data). Extrai o texto depois da
-    última vírgula desse campo.
+    Extrai a nacionalidade de forma estrutural.
+
+    v1.3 — reescrito após confirmar, com o texto real da página do Alex
+    Pereira, DOIS bugs na versão anterior (que tentava extrair o país
+    do campo "Born <Cidade>, <País>"):
+        1. Nomes de cidade acentuados (ex.: "São Paulo") quebravam a
+           classe de caracteres [A-Za-z .] do regex, que não inclui
+           letras acentuadas — o resultado ficava truncado no primeiro
+           caractere não-ASCII (ex.: "S" em vez de "Brazil").
+        2. O campo "Born" tem número de vírgulas inconsistente entre
+           lutadores: "Born Tacoma, United States" (1 vírgula) vs "Born
+           São Bernardo do Campo, São Paulo, Brazil" (2 vírgulas, com
+           estado no meio) — pegar "o texto depois da primeira vírgula"
+           pegava o ESTADO, não o país, no segundo caso.
+
+    A fonte mais confiável observada nas duas páginas reais analisadas
+    é um token de país solto que aparece IMEDIATAMENTE ANTES do campo
+    "Style" (estilo de luta) — ex.: "... USA · Style Grappling ..." e
+    "... Brazil · Style Kickboxing ...". Localizamos esse token
+    estruturalmente (nó de texto anterior ao rótulo "Style" na árvore),
+    em vez de tentar decompor o campo "Born".
     """
-    match = re.search(r"\bBorn\s+[^\n,]+,\s*([A-Za-z .]+)", full_text)
-    return match.group(1).strip() if match else None
+    style_node = soup.find(string=re.compile(r"^\s*Style\b", re.IGNORECASE))
+    if style_node is None:
+        return None
+
+    # Pula nós vazios/só-espaço (comuns entre tags em HTML formatado)
+    # até achar o texto de verdade anterior ao rótulo "Style".
+    node = style_node
+    for _ in range(5):
+        node = node.find_previous(string=True)
+        if node is None:
+            return None
+        text = str(node).strip()
+        if text:
+            break
+    else:
+        return None
+    # Sanidade básica: nome de país plausível (sem dígitos, tamanho razoável).
+    # Suporta acentos (não restringe a A-Za-z como a versão anterior).
+    if text and len(text) <= 40 and not re.search(r"\d", text):
+        return text
+    return None
 
 
 # --------------------------------------------------------------------------
@@ -336,7 +424,7 @@ def parse_fighter_page(html: str, url: str,
     height_cm = extract_height_cm(soup)
     reach_cm = extract_reach_cm(soup)
     age_reported = extract_age_reported(soup, text)
-    nationality = extract_nationality(text)
+    nationality = extract_nationality(soup)
 
     if ranking_hint:
         weight_class = ranking_hint.weight_class
@@ -445,6 +533,9 @@ def main() -> int:
     parser.add_argument("--output", type=Path, default=OUTPUT_CSV)
     parser.add_argument("--inspect", type=str, default=None,
                          help="Modo debug: mostra os 5 estágios de extração de um lutador (slug, ex.: miesha_tate)")
+    parser.add_argument("--verbose", action="store_true",
+                         help="Mostra contadores de diagnóstico em cada etapa da leitura da página de rankings "
+                              "(HTTP status, bytes, links brutos, cabeçalhos reconhecidos, links válidos)")
     args = parser.parse_args()
 
     session = requests.Session()
@@ -483,11 +574,25 @@ def main() -> int:
         return 1
 
     print(f"\nBuscando página de rankings em {RANKING_URL} ...")
-    ranking_entries = fetch_ranking_entries(session)
+    ranking_entries = fetch_ranking_entries(session, verbose=args.verbose)
     fighter_urls = list(ranking_entries.keys())
     if args.limit:
         fighter_urls = fighter_urls[: args.limit]
     print(f"Encontrados {len(fighter_urls)} lutadores únicos nos rankings.\n")
+
+    # Nunca gerar um CSV vazio silenciosamente: se a contagem vier
+    # anormalmente baixa, para com um erro explícito em vez de seguir em
+    # frente como se nada tivesse acontecido (foi exatamente isso que
+    # aconteceu na regressão que gerou um fighters_seed.csv vazio).
+    if not args.limit and len(fighter_urls) < MIN_EXPECTED_FIGHTERS:
+        print(
+            f"❌ Esperado bem mais que {MIN_EXPECTED_FIGHTERS} lutadores nos rankings, encontrado "
+            f"{len(fighter_urls)}. Isso indica uma regressão na extração, não um resultado normal.\n"
+            f"   Rode de novo com --verbose para ver em qual etapa a contagem cai:\n"
+            f"       python scripts/scrape_gidstats.py --verbose --limit 5\n"
+            f"   Nenhum arquivo CSV foi sobrescrito."
+        )
+        return 1
 
     results: list[ScrapedFighter] = []
     for i, url in enumerate(fighter_urls, start=1):

@@ -97,6 +97,77 @@ class TestStableSlugId(unittest.TestCase):
         self.assertEqual(db2.get_fighter("fighter_b").name, "Fighter B")
 
 
+class TestSchemaMigration(unittest.TestCase):
+    """
+    Regressão: abrir um banco criado por uma versão mais antiga do
+    projeto (sem as colunas de idade direta/overrides/fotos) não pode
+    quebrar com 'IndexError: No item with that key'.
+    """
+
+    OLD_SCHEMA = """
+    CREATE TABLE fighters (
+        fighter_id      TEXT PRIMARY KEY,
+        name            TEXT NOT NULL,
+        nickname        TEXT,
+        nationality     TEXT,
+        weight_class    TEXT,
+        height_cm       REAL,
+        reach_cm        REAL,
+        stance          TEXT,
+        birth_date      TEXT,
+        wins            INTEGER DEFAULT 0,
+        losses          INTEGER DEFAULT 0,
+        draws           INTEGER DEFAULT 0,
+        no_contests     INTEGER DEFAULT 0,
+        wins_ko         INTEGER,
+        wins_sub        INTEGER,
+        wins_dec        INTEGER,
+        ranking         TEXT,
+        image_url       TEXT,
+        local_image_path TEXT,
+        source          TEXT,
+        source_url      TEXT,
+        last_updated    TEXT
+    );
+    CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
+    """
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.db_path = self.tmp / "old_schema.db"
+
+        import sqlite3
+        conn = sqlite3.connect(self.db_path)
+        conn.executescript(self.OLD_SCHEMA)
+        conn.execute(
+            "INSERT INTO fighters (fighter_id, name, wins, losses, draws) "
+            "VALUES ('jon_jones', 'Jon Jones', 28, 1, 0)"
+        )
+        conn.execute("INSERT INTO meta (key, value) VALUES ('seeded', '1')")
+        conn.commit()
+        conn.close()
+
+    def tearDown(self):
+        if self.db_path.exists():
+            os.remove(self.db_path)
+
+    def test_opening_old_database_does_not_raise_indexerror(self):
+        db = DatabaseManager(db_path=str(self.db_path))
+        db.initialize()  # não deve levantar IndexError
+        fighter = db.get_fighter("jon_jones")
+        self.assertEqual(fighter.name, "Jon Jones")
+        self.assertIsNone(fighter.image_license)  # coluna nova, migrada, sem dado ainda
+        self.assertIsNone(fighter.age_reported)
+
+    def test_new_columns_are_usable_after_migration(self):
+        db = DatabaseManager(db_path=str(self.db_path))
+        db.initialize()
+        db.set_fighter_photo("jon_jones", local_image_path="x.jpg", image_license="CC0",
+                              image_attribution="A", image_source_url="https://example.com")
+        fighter = db.get_fighter("jon_jones")
+        self.assertEqual(fighter.image_license, "CC0")
+
+
 class TestFreshInstallInitialization(unittest.TestCase):
     """Regressão: reseed() e initialize() precisam funcionar numa instalação limpa (sem .db ainda)."""
 
@@ -237,6 +308,66 @@ class TestAgeReportedInDatabase(unittest.TestCase):
         fighter = db.get_fighter("jon_jones")
         self.assertNotEqual(fighter.age, 99)
         self.assertFalse(fighter.age_is_estimated)
+
+
+class TestFiltersAndPhotos(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.db_path = self.tmp / "test.db"
+        self.seed_csv = self.tmp / "seed.csv"
+        self.overrides_csv = self.tmp / "no_overrides.csv"
+        _write_seed_csv(self.seed_csv, [
+            {"fighter_id": "jon_jones", "name": "Jon Jones", "weight_class": "Heavyweight",
+             "nationality": "United States", "wins": 28, "losses": 1, "draws": 0},
+            {"fighter_id": "weili_zhang", "name": "Zhang Weili", "weight_class": "Women's Strawweight",
+             "nationality": "China", "wins": 26, "losses": 4, "draws": 0},
+        ])
+
+    def tearDown(self):
+        for f in (self.db_path, self.seed_csv, self.overrides_csv):
+            if f.exists():
+                os.remove(f)
+
+    def _db(self):
+        db = DatabaseManager(db_path=str(self.db_path), seed_csv=str(self.seed_csv),
+                              overrides_csv=str(self.overrides_csv))
+        db.initialize()
+        return db
+
+    def test_list_weight_classes_and_nationalities(self):
+        db = self._db()
+        self.assertIn("Heavyweight", db.list_weight_classes())
+        self.assertIn("China", db.list_nationalities())
+
+    def test_filter_by_nationality_only(self):
+        db = self._db()
+        results = db.filter_fighters(nationality="China")
+        self.assertEqual([f.name for f in results], ["Zhang Weili"])
+
+    def test_filter_combines_query_and_weight_class_with_and(self):
+        db = self._db()
+        # nome bate, categoria não -> não deve retornar nada
+        results = db.filter_fighters(query="jon", weight_class="Women's Strawweight")
+        self.assertEqual(results, [])
+        # nome e categoria batem -> retorna
+        results2 = db.filter_fighters(query="jon", weight_class="Heavyweight")
+        self.assertEqual([f.name for f in results2], ["Jon Jones"])
+
+    def test_set_fighter_photo_persists_license_and_attribution(self):
+        db = self._db()
+        db.set_fighter_photo("jon_jones", local_image_path="images/fighters/jon_jones.jpg",
+                              image_license="CC-BY-SA 4.0", image_attribution="Some Photographer",
+                              image_source_url="https://commons.wikimedia.org/wiki/File:x.jpg")
+        fighter = db.get_fighter("jon_jones")
+        self.assertEqual(fighter.image_license, "CC-BY-SA 4.0")
+        self.assertEqual(fighter.image_attribution, "Some Photographer")
+        self.assertTrue(fighter.local_image_path.endswith("jon_jones.jpg"))
+
+    def test_set_fighter_photo_for_unknown_fighter_does_not_raise(self):
+        db = self._db()
+        db.set_fighter_photo("nao_existe", local_image_path="x.jpg", image_license="CC0",
+                              image_attribution="A", image_source_url="https://example.com")
+        # não deve levantar exceção; simplesmente não grava nada
 
 
 if __name__ == "__main__":

@@ -37,6 +37,7 @@ REAL_STRUCTURE_HTML = """
 <div class="stat-row"><span class="label">Reach</span><span class="value">65 inch</span><span class="value">165 cm</span></div>
 <div class="stat-row"><span class="label">Leg Reach</span><span class="value">37 inch</span><span class="value">94 cm</span></div>
 <div class="country">USA</div>
+<div class="style">Style Grappling</div>
 <div class="stance">Stance Orthodox</div>
 <div class="born">Born Tacoma, United States</div>
 </body></html>
@@ -92,18 +93,197 @@ class TestAgeReportedExtraction(unittest.TestCase):
 
 
 class TestNationalityExtraction(unittest.TestCase):
-    def test_nationality_from_born_field_not_from_nonexistent_country_label(self):
+    def test_nationality_extracted_from_token_before_style_label(self):
         """
-        Regressão do bug original: o regex antigo procurava a palavra
-        literal 'country', que nunca existe na página. A fonte real é
-        o campo 'Born <Cidade>, <País>' (local de nascimento).
+        A fonte confiável de nacionalidade é o token solto logo antes
+        do rótulo 'Style' (não existe rótulo 'Country:' na página).
         """
         soup = BeautifulSoup(REAL_STRUCTURE_HTML, "html.parser")
-        text = soup.get_text("\n", strip=True)
-        self.assertEqual(extract_nationality(text), "United States")
+        self.assertEqual(extract_nationality(soup), "USA")
 
     def test_no_born_field_returns_none(self):
-        self.assertIsNone(extract_nationality("Nenhum campo Born aqui"))
+        soup = BeautifulSoup("<html><body><h1>Sem Style</h1></body></html>", "html.parser")
+        self.assertIsNone(extract_nationality(soup))
+
+    def test_accented_city_name_does_not_break_extraction(self):
+        """
+        Regressão do bug do Alex Pereira: 'Born São Bernardo do Campo,
+        São Paulo, Brazil' tem (a) um nome de cidade acentuado e (b)
+        DUAS vírgulas (cidade, estado, país) — a versão antiga cortava
+        no primeiro caractere não-ASCII e pegava o estado, não o país.
+        A extração correta usa o token solto antes de 'Style', não o
+        campo 'Born'.
+        """
+        html = """
+        <html><body>
+        <h1>Alex Pereira</h1>
+        <div>Brazil</div>
+        <div>Style Kickboxing</div>
+        <div>Born São Bernardo do Campo, São Paulo, Brazil</div>
+        </body></html>
+        """
+        soup = BeautifulSoup(html, "html.parser")
+        self.assertEqual(extract_nationality(soup), "Brazil")
+
+    def test_whitespace_only_text_nodes_between_tags_are_skipped(self):
+        """HTML formatado com indentação/quebras de linha entre tags não deve quebrar a busca."""
+        html = "<html><body>\n  <div>\n    Brazil\n  </div>\n  <div>\n    Style Kickboxing\n  </div>\n</body></html>"
+        soup = BeautifulSoup(html, "html.parser")
+        self.assertEqual(extract_nationality(soup), "Brazil")
+
+
+class TestRankingDropdownDoesNotContaminateWeightClass(unittest.TestCase):
+    """
+    Regressão do bug relatado: Alex Pereira, Alexandre Pantoja e
+    Alexander Volkanovski apareciam todos como 'Women's Bantamweight'
+    porque um <select> de filtro (com todas as categorias, inclusive
+    essa por último) contaminava a detecção de cabeçalhos de seção.
+    """
+
+    def _fake_ranking_html(self) -> str:
+        return """
+        <html><body>
+        <select>
+        <option>Men's Pound-for-Pound Top Rank</option>
+        <option>Heavyweight</option>
+        <option>Light Heavyweight</option>
+        <option>Flyweight</option>
+        <option>Featherweight</option>
+        <option>Women's Pound-for-Pound Top Rank</option>
+        <option>Women's Bantamweight</option>
+        </select>
+        <h2>Light Heavyweight</h2>
+        <a href="/fighters/alex_pereira.html">Alex Pereira</a>
+        <h2>Flyweight</h2>
+        <a href="/fighters/alexandre_pantoja.html">Alexandre Pantoja</a>
+        <h2>Featherweight</h2>
+        <a href="/fighters/alexander_volkanovski.html">Alexander Volkanovski</a>
+        <h2>Women's Bantamweight</h2>
+        <a href="/fighters/some_woman_fighter.html">Some Woman Fighter</a>
+        </body></html>
+        """
+
+    def test_men_fighters_get_correct_division_not_last_dropdown_option(self):
+        from unittest.mock import MagicMock
+
+        session = MagicMock()
+        response = MagicMock()
+        response.text = self._fake_ranking_html()
+        response.raise_for_status = lambda: None
+        session.get.return_value = response
+
+        entries = fetch_ranking_entries(session)
+
+        self.assertEqual(
+            entries["https://gidstats.com/fighters/alex_pereira.html"].weight_class, "Light Heavyweight"
+        )
+        self.assertEqual(
+            entries["https://gidstats.com/fighters/alexandre_pantoja.html"].weight_class, "Flyweight"
+        )
+        self.assertEqual(
+            entries["https://gidstats.com/fighters/alexander_volkanovski.html"].weight_class, "Featherweight"
+        )
+        # A seção real de Women's Bantamweight (depois do dropdown) continua correta
+        self.assertEqual(
+            entries["https://gidstats.com/fighters/some_woman_fighter.html"].weight_class, "Women's Bantamweight"
+        )
+
+    def test_real_fighter_listing_inside_nav_tag_is_not_deleted(self):
+        """
+        Regressão direta: uma correção anterior removia <nav> "por
+        precaução", sem evidência de que fosse fonte de contaminação —
+        isso apagava a listagem real de lutadores sempre que ela estava
+        dentro de uma tag <nav> (comum e semanticamente correto para
+        uma lista de rankings), zerando a coleta ("0 lutadores
+        encontrados"). Só <select>/<option> devem ser removidos — são a
+        única fonte de contaminação com evidência real por trás.
+        """
+        from unittest.mock import MagicMock
+
+        html = """
+        <html><body>
+        <select><option>Women's Bantamweight</option></select>
+        <nav>
+        <h2>Heavyweight</h2>
+        <a href="/fighters/jon_jones.html">Jon Jones</a>
+        <h2>Light Heavyweight</h2>
+        <a href="/fighters/alex_pereira.html">Alex Pereira</a>
+        </nav>
+        </body></html>
+        """
+        session = MagicMock()
+        response = MagicMock()
+        response.text = html
+        response.raise_for_status = lambda: None
+        session.get.return_value = response
+
+        entries = fetch_ranking_entries(session)
+        self.assertEqual(len(entries), 2)
+        self.assertEqual(entries["https://gidstats.com/fighters/jon_jones.html"].weight_class, "Heavyweight")
+        self.assertEqual(
+            entries["https://gidstats.com/fighters/alex_pereira.html"].weight_class, "Light Heavyweight"
+        )
+
+    def test_fighter_name_wrapped_in_nested_spans_is_still_detected(self):
+        """
+        Regressão do bug de "0 lutadores encontrados": a estrutura real
+        da página envolve o nome do lutador em <span> aninhados dentro
+        do <a> (confirmado ao vivo — o texto do link vem fragmentado em
+        spans de primeiro nome / rank / nome completo, ex.: "Islam 1
+        IslamMakhachev"). A versão anterior checava se o nó de TEXTO
+        tinha o <a> como pai direto — com spans aninhados, o pai direto
+        do texto é o <span>, nunca o <a>, e ZERO links batiam com essa
+        condição. A extração agora trata cada <a> como uma unidade
+        (soup.descendants + get_text()), não importando o quanto de
+        aninhamento exista dentro dele.
+        """
+        from unittest.mock import MagicMock
+
+        html = """
+        <html><body>
+        <h3>Heavyweight</h3>
+        <ul>
+        <li><a href="/fighters/tom_aspinall.html"><span>Tom</span><span>TomAspinall Champion</span></a></li>
+        <li><a href="/fighters/ciryl_gane.html"><span>Ciryl</span><span>1</span><span>CirylGane</span></a></li>
+        </ul>
+        <h3>Light Heavyweight</h3>
+        <ul>
+        <li><a href="/fighters/alex_pereira.html"><span>Alex</span><span>AlexPereira Champion</span></a></li>
+        </ul>
+        </body></html>
+        """
+        session = MagicMock()
+        response = MagicMock()
+        response.text = html
+        response.raise_for_status = lambda: None
+        session.get.return_value = response
+
+        entries = fetch_ranking_entries(session)
+        self.assertEqual(len(entries), 3)
+        self.assertEqual(entries["https://gidstats.com/fighters/tom_aspinall.html"].weight_class, "Heavyweight")
+        self.assertEqual(entries["https://gidstats.com/fighters/ciryl_gane.html"].weight_class, "Heavyweight")
+        self.assertEqual(
+            entries["https://gidstats.com/fighters/alex_pereira.html"].weight_class, "Light Heavyweight"
+        )
+        # nome não fica vazio nem quebra, mesmo vindo de spans concatenados
+        self.assertIn("Tom", entries["https://gidstats.com/fighters/tom_aspinall.html"].name)
+
+    def test_verbose_mode_does_not_raise_and_returns_same_result(self):
+        """verbose=True é só instrumentação de diagnóstico — não pode mudar o resultado."""
+        from unittest.mock import MagicMock
+
+        html = self._fake_ranking_html()
+        session = MagicMock()
+        response = MagicMock()
+        response.text = html
+        response.content = html.encode()
+        response.status_code = 200
+        response.raise_for_status = lambda: None
+        session.get.return_value = response
+
+        entries_quiet = fetch_ranking_entries(session)
+        entries_verbose = fetch_ranking_entries(session, verbose=True)
+        self.assertEqual(set(entries_quiet.keys()), set(entries_verbose.keys()))
 
 
 class TestSlugFromUrl(unittest.TestCase):
@@ -126,7 +306,7 @@ class TestFullParseFighterPage(unittest.TestCase):
         self.assertEqual(result.height_cm, 168.0)
         self.assertEqual(result.reach_cm, 165.0)
         self.assertEqual(result.age_reported, 39)
-        self.assertEqual(result.nationality, "United States")
+        self.assertEqual(result.nationality, "USA")
         # birth_date deve ficar None (a página não publica DOB numérico)
         self.assertIsNone(result.birth_date)
         # cartel continua funcionando (não deveria ter regredido)

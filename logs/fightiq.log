@@ -36,3 +36,33 @@ sqlite3.OperationalError: no such table: meta
 2026-07-23 17:17:36 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
 2026-07-23 17:19:00 | INFO     | database | Banco de dados já populado; seed automático ignorado.
 2026-07-23 17:19:01 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-24 10:17:31 | INFO     | database | Banco de dados já populado; seed automático ignorado.
+2026-07-24 10:17:32 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-24 16:02:55 | INFO     | database | Banco populado com 0 lutadores a partir de C:\Users\joaov\OneDrive\Área de Trabalho\dev\claude\FightIQ\assets\data\fighters_seed.csv
+2026-07-24 16:03:11 | INFO     | database | Banco de dados já populado; seed automático ignorado.
+2026-07-24 16:03:12 | CRITICAL | fightiq.main | Erro fatal na inicialização do FightIQ:
+Traceback (most recent call last):
+  File "C:\Users\joaov\OneDrive\Área de Trabalho\dev\claude\FightIQ\main.py", line 39, in main
+    app = FightIQApp()
+          ^^^^^^^^^^^^
+  File "C:\Users\joaov\OneDrive\Área de Trabalho\dev\claude\FightIQ\interface.py", line 78, in __init__
+    self.show_page("home")
+  File "C:\Users\joaov\OneDrive\Área de Trabalho\dev\claude\FightIQ\interface.py", line 156, in show_page
+    page.on_show(**kwargs)
+  File "C:\Users\joaov\OneDrive\Área de Trabalho\dev\claude\FightIQ\interface.py", line 287, in on_show
+    fighters = self.app.db.list_all_fighters()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\joaov\OneDrive\Área de Trabalho\dev\claude\FightIQ\database.py", line 448, in list_all_fighters
+    return [_row_to_fighter(r) for r in rows]
+            ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\joaov\OneDrive\Área de Trabalho\dev\claude\FightIQ\database.py", line 638, in _row_to_fighter
+    image_license=row["image_license"],
+                  ~~~^^^^^^^^^^^^^^^^^
+IndexError: No item with that key
+
+2026-07-24 22:36:55 | INFO     | database | Migração de schema: coluna 'image_license' adicionada à tabela fighters.
+2026-07-24 22:36:55 | INFO     | database | Migração de schema: coluna 'image_attribution' adicionada à tabela fighters.
+2026-07-24 22:36:55 | INFO     | database | Migração de schema: coluna 'image_source_url' adicionada à tabela fighters.
+2026-07-24 22:36:55 | INFO     | database | Banco populado com 175 lutadores a partir de C:\Users\joaov\OneDrive\Área de Trabalho\dev\claude\FightIQ\assets\data\fighters_seed.csv
+2026-07-24 22:37:09 | INFO     | database | Banco de dados já populado; seed automático ignorado.
+2026-07-24 22:37:12 | INFO     | fightiq.main | FightIQ iniciado com sucesso.

@@ -84,6 +84,9 @@ CREATE TABLE IF NOT EXISTS fighters (
     ranking         TEXT,
     image_url       TEXT,
     local_image_path TEXT,
+    image_license   TEXT,
+    image_attribution TEXT,
+    image_source_url TEXT,
     source          TEXT,
     source_url      TEXT,
     last_updated    TEXT,
@@ -168,6 +171,17 @@ class DatabaseManager:
     # ------------------------------------------------------------------
     # Inicialização / seed
     # ------------------------------------------------------------------
+    # Colunas que podem ter sido adicionadas em versões mais novas do
+    # projeto, mapeadas para seu tipo SQLite — usado por _migrate_schema()
+    # para adicionar automaticamente em bancos já existentes.
+    _MIGRATABLE_COLUMNS = {
+        "age_reported": "INTEGER",
+        "manually_overridden_fields": "TEXT",
+        "image_license": "TEXT",
+        "image_attribution": "TEXT",
+        "image_source_url": "TEXT",
+    }
+
     def _ensure_schema(self) -> None:
         """
         Garante que as tabelas existam, de forma idempotente (CREATE
@@ -176,9 +190,35 @@ class DatabaseManager:
         por initialize() — porque qualquer uma dessas pode ser a
         primeira chamada feita numa instalação nova (ex.: rodar
         DatabaseManager().reseed() direto, sem um initialize() antes).
+
+        Também roda uma migração leve (_migrate_schema) para que um
+        banco criado por uma versão mais antiga do projeto ganhe
+        automaticamente as colunas adicionadas depois — sem isso, abrir
+        um banco antigo com uma versão nova do código quebra com
+        "IndexError: No item with that key" na primeira coluna nova que
+        a interface tentar ler.
         """
         with self._connect() as conn:
             conn.executescript(SCHEMA)
+        self._migrate_schema()
+
+    def _migrate_schema(self) -> None:
+        """
+        Adiciona, via ALTER TABLE ... ADD COLUMN, qualquer coluna de
+        _MIGRATABLE_COLUMNS que ainda não exista na tabela fighters de
+        um banco já criado. Cobre apenas adições de coluna (o caso
+        comum ao evoluir o projeto); mudanças de TIPO de uma coluna já
+        existente (ex.: fighter_id INTEGER -> TEXT, feita na v1.2) não
+        são cobertas por este mecanismo — SQLite não migra tipo de
+        chave primária de forma trivial, então essa mudança específica
+        continua exigindo apagar o banco antigo (documentado no README).
+        """
+        with self._connect() as conn:
+            existing_cols = {row["name"] for row in conn.execute("PRAGMA table_info(fighters)")}
+            for column, col_type in self._MIGRATABLE_COLUMNS.items():
+                if column not in existing_cols:
+                    conn.execute(f"ALTER TABLE fighters ADD COLUMN {column} {col_type}")
+                    logger.info("Migração de schema: coluna '%s' adicionada à tabela fighters.", column)
 
     def initialize(self) -> None:
         """
@@ -401,6 +441,27 @@ class DatabaseManager:
         self._ensure_schema()
         self._apply_manual_overrides()
 
+    def set_fighter_photo(self, fighter_id: str, local_image_path: str, image_license: str,
+                           image_attribution: str, image_source_url: str) -> None:
+        """
+        Grava a foto de um lutador coletada via scripts/fetch_fighter_photos.py
+        — sempre com licença e atribuição, nunca uma imagem "solta".
+        """
+        with self._connect() as conn:
+            exists = conn.execute("SELECT 1 FROM fighters WHERE fighter_id = ?", (fighter_id,)).fetchone()
+            if not exists:
+                logger.warning("set_fighter_photo: fighter_id '%s' não existe no banco.", fighter_id)
+                return
+            conn.execute(
+                """
+                UPDATE fighters
+                SET local_image_path = ?, image_license = ?, image_attribution = ?, image_source_url = ?
+                WHERE fighter_id = ?
+                """,
+                (local_image_path, image_license, image_attribution, image_source_url, fighter_id),
+            )
+        logger.info("Foto salva para '%s' (%s, %s)", fighter_id, image_license, image_attribution)
+
     # ------------------------------------------------------------------
     # Consultas de lutadores
     # ------------------------------------------------------------------
@@ -421,6 +482,50 @@ class DatabaseManager:
     def list_all_fighters(self) -> List[Fighter]:
         with self._connect() as conn:
             rows = conn.execute("SELECT * FROM fighters ORDER BY name ASC").fetchall()
+        return [_row_to_fighter(r) for r in rows]
+
+    def list_weight_classes(self) -> List[str]:
+        """Categorias de peso distintas presentes no banco, ordenadas alfabeticamente."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT weight_class FROM fighters WHERE weight_class IS NOT NULL ORDER BY weight_class"
+            ).fetchall()
+        return [r["weight_class"] for r in rows]
+
+    def list_nationalities(self) -> List[str]:
+        """Nacionalidades distintas presentes no banco, ordenadas alfabeticamente."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT nationality FROM fighters WHERE nationality IS NOT NULL ORDER BY nationality"
+            ).fetchall()
+        return [r["nationality"] for r in rows]
+
+    def filter_fighters(self, query: Optional[str] = None, weight_class: Optional[str] = None,
+                         nationality: Optional[str] = None) -> List[Fighter]:
+        """
+        Busca combinável: nome/apelido (parcial) E/OU categoria de peso
+        E/OU nacionalidade — todos os filtros informados se combinam
+        com AND. Qualquer filtro deixado em None/"" é ignorado.
+        """
+        clauses, params = [], []
+        if query:
+            clauses.append("(name LIKE ? COLLATE NOCASE OR nickname LIKE ? COLLATE NOCASE)")
+            like = f"%{query.strip()}%"
+            params.extend([like, like])
+        if weight_class:
+            clauses.append("weight_class = ?")
+            params.append(weight_class)
+        if nationality:
+            clauses.append("nationality = ?")
+            params.append(nationality)
+
+        sql = "SELECT * FROM fighters"
+        if clauses:
+            sql += " WHERE " + " AND ".join(clauses)
+        sql += " ORDER BY name ASC"
+
+        with self._connect() as conn:
+            rows = conn.execute(sql, params).fetchall()
         return [_row_to_fighter(r) for r in rows]
 
     def get_fighter(self, fighter_id: str) -> Optional[Fighter]:
@@ -567,6 +672,9 @@ def _row_to_fighter(row: sqlite3.Row) -> Fighter:
         ranking=row["ranking"],
         image_url=row["image_url"],
         local_image_path=row["local_image_path"],
+        image_license=row["image_license"],
+        image_attribution=row["image_attribution"],
+        image_source_url=row["image_source_url"],
         source=row["source"],
         source_url=row["source_url"],
         last_updated=row["last_updated"],

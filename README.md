@@ -202,6 +202,109 @@ alcance e nacionalidade — incluindo o caso "Reach vs Leg Reach") e
 entre reaberturas do app). Rode isso sempre que mexer no scraper ou no
 banco, antes de considerar uma mudança pronta.
 
+## 🔍 Auditoria de qualidade de dados (v1.3 — categoria e nacionalidade)
+
+Uma terceira rodada de auditoria, também com evidência real (texto da
+própria página de rankings e da página do Alex Pereira), encontrou e
+corrigiu:
+
+| Problema | Causa raiz | Correção |
+|---|---|---|
+| Categoria errada (ex.: Alex Pereira, Pantoja e Volkanovski como "Women's Bantamweight") | A página de rankings tem um **dropdown de filtro** ("Select other categories") listando o nome de todas as divisões dentro de `<option>` — o código antigo não distinguia isso de um cabeçalho de seção real, e "Women's Bantamweight" (última opção do dropdown) contaminava lutadores sempre que o cabeçalho real de uma seção não batia | `fetch_ranking_entries` agora remove `<select>/<option>/<nav>` da árvore antes de procurar cabeçalhos, e navega a árvore do BeautifulSoup em vez de regex sobre HTML bruto |
+| Nacionalidade cortada (ex.: Alex Pereira como apenas "S") | O campo `"Born São Bernardo do Campo, São Paulo, Brazil"` tem (a) um nome de cidade acentuado, que quebrava a classe de caracteres `[A-Za-z .]` do regex antigo, e (b) duas vírgulas (cidade, estado, país), então "pegar depois da primeira vírgula" retornava o estado, não o país | Nacionalidade agora vem de um token solto que aparece de forma consistente **antes do campo "Style"** (localizado estruturalmente), em vez de tentar decompor o campo "Born" |
+
+## 📸 Fotos dos lutadores (Wikimedia Commons)
+
+`scripts/fetch_fighter_photos.py` busca a imagem principal do artigo da
+Wikipédia de cada lutador e **verifica a licença no Wikimedia Commons
+antes de baixar qualquer coisa** — só aceita licenças livres (CC-BY,
+CC-BY-SA, CC0, domínio público). A licença e a atribuição do fotógrafo
+ficam gravadas no banco e são exibidas no perfil do lutador na
+interface (exigência das licenças Creative Commons). Lutadores sem foto
+com licença confirmada simplesmente não têm foto — nunca uma imagem
+"encontrada por aí" sem verificação.
+
+```bash
+python scripts/fetch_fighter_photos.py --inspect "Jon Jones"   # debug, não baixa nada
+python scripts/fetch_fighter_photos.py --limit 10               # testa em poucos lutadores
+python scripts/fetch_fighter_photos.py                          # roda pra todo o banco
+```
+
+## 🔎 Filtros combináveis (categoria + nacionalidade)
+
+A tela "Buscar Lutador" agora tem dois filtros além da busca por nome —
+categoria de peso e nacionalidade, populados dinamicamente a partir do
+que existe no banco. Os três critérios (nome, categoria, nacionalidade)
+se combinam com **E** (ex.: brasileiros da categoria peso-leve), e
+qualquer um deles pode ficar vazio/"Todas" para não filtrar por aquele
+critério — dá pra navegar só por categoria ou só por nacionalidade, sem
+digitar nome nenhum.
+
+## 🩹 Correção de regressão (v1.3.1)
+
+A v1.3 introduziu duas regressões, encontradas e relatadas depois do
+deploy — documentando aqui porque são o tipo de erro que vale a pena
+todo mundo saber que já aconteceu e como foi evitado no futuro:
+
+1. **Scraper zerava a coleta ("0 lutadores encontrados").** A correção
+   do bug do dropdown de categorias removia `<select>`, `<option>` **e
+   `<nav>`** da árvore antes de procurar cabeçalhos/links — mas só
+   havia evidência real de que `<select>`/`<option>` contaminavam a
+   extração. `<nav>` foi removido por precaução, sem evidência, e isso
+   apagava a listagem real de lutadores sempre que ela estava dentro de
+   uma tag `<nav>` (comum e semanticamente correto). **Lição: só remover
+   elementos da árvore com evidência concreta de contaminação, nunca por
+   suposição "por segurança".**
+2. **`IndexError: No item with that key: image_license` em bancos já
+   existentes.** `CREATE TABLE IF NOT EXISTS` não adiciona colunas
+   novas a uma tabela que já existe — então um `database/fightiq.db`
+   criado antes da funcionalidade de fotos não tinha as colunas novas.
+   Agora `DatabaseManager` roda uma migração leve (`ALTER TABLE ... ADD
+   COLUMN`) automaticamente toda vez que o banco é aberto, então
+   atualizações que só *adicionam* colunas não exigem mais apagar o
+   banco manualmente. (Mudanças de *tipo* de uma coluna já existente,
+   como `fighter_id` de `INTEGER` para `TEXT` na v1.2, ainda exigem
+   recriar o banco — SQLite não migra tipo de chave primária de forma
+   trivial.)
+
+Ambas têm teste de regressão dedicado em `tests/test_scraper_parsing.py`
+e `tests/test_database.py`.
+
+### Teste ao vivo (rede de segurança contra regressões de coleta)
+
+`tests/test_scraper_live.py` verifica que a página de rankings retorna
+mais de 150 lutadores — mas precisa de internet de verdade, então fica
+**desligado por padrão** (não roda junto com `python -m unittest
+discover tests`, pra nunca quebrar num ambiente sem rede). Rode
+manualmente depois de qualquer mudança em `scripts/scrape_gidstats.py`:
+
+```bash
+FIGHTIQ_RUN_LIVE_TESTS=1 python -m unittest tests.test_scraper_live -v
+```
+
+## 🩹 Correção de regressão (v1.3.2) — "0 lutadores encontrados"
+
+A correção da v1.3.1 (remover `<nav>` da lista de decompose) **não
+resolveu** o problema — foi uma hipótese razoável, mas errada. A causa
+real, encontrada buscando a página ao vivo de novo: os nomes dos
+lutadores na página real vêm envoltos em **`<span>` aninhados dentro do
+`<a>`** (ex.: `<a href="..."><span>Islam</span><span>1</span><span>IslamMakhachev</span></a>`),
+e o código verificava se o **pai direto** do nó de texto era o `<a>` —
+com spans aninhados, o pai direto é sempre o `<span>`, nunca o `<a>`, e
+**nenhum link batia com essa condição**. Corrigido tratando cada `<a>`
+como uma unidade (`soup.descendants` + `get_text()`), robusto a
+qualquer nível de aninhamento dentro do link.
+
+**Novidades pra evitar que isso passe despercebido de novo:**
+- `python scripts/scrape_gidstats.py --verbose` mostra contadores em
+  cada etapa (status HTTP, bytes recebidos, links brutos no HTML,
+  cabeçalhos reconhecidos, links válidos) — sem precisar adivinhar em
+  qual etapa a contagem despenca.
+- O scraper agora **recusa gravar um CSV** se encontrar menos de 150
+  lutadores (a menos que `--limit` tenha sido usado de propósito) — erro
+  explícito, em vez de gerar silenciosamente um `fighters_seed.csv`
+  vazio como aconteceu nessa regressão.
+
 ## 🏗️ Arquitetura
 
 ```

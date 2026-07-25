@@ -56,6 +56,9 @@ class Fighter:
     ranking: Optional[str] = None
     image_url: Optional[str] = None
     local_image_path: Optional[str] = None
+    image_license: Optional[str] = None
+    image_attribution: Optional[str] = None
+    image_source_url: Optional[str] = None
 
     source: Optional[str] = None
     source_url: Optional[str] = None

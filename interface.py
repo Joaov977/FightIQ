@@ -19,6 +19,7 @@ Estrutura:
 from __future__ import annotations
 
 import io
+import os
 from typing import Optional
 
 import customtkinter as ctk
@@ -201,10 +202,19 @@ class StatRow(ctk.CTkFrame):
 
 def load_fighter_image(fighter: Fighter, size=(140, 140)) -> Optional[ctk.CTkImage]:
     """
-    Carrega a foto de um lutador, se `image_url` estiver definido, ou
-    retorna None (a UI então mostra um placeholder). Nunca gera uma
-    imagem falsa — apenas carrega o que existe de fato.
+    Carrega a foto de um lutador. Prioriza a foto local já baixada e
+    verificada por scripts/fetch_fighter_photos.py (com licença livre
+    confirmada no Wikimedia Commons); só tenta a `image_url` remota
+    como plano B. Retorna None (placeholder na UI) se nenhuma das duas
+    existir — nunca gera uma imagem falsa.
     """
+    if fighter.local_image_path and os.path.isfile(fighter.local_image_path):
+        try:
+            img = Image.open(fighter.local_image_path).convert("RGB")
+            return ctk.CTkImage(light_image=img, dark_image=img, size=size)
+        except Exception:
+            logger.warning("Não foi possível abrir a foto local de %s", fighter.name)
+
     if not fighter.image_url:
         return None
     try:
@@ -307,13 +317,31 @@ class SearchPage(ctk.CTkFrame):
                      text_color=Theme.TEXT_PRIMARY).pack(anchor="w")
 
         search_bar = ctk.CTkFrame(self, fg_color="transparent")
-        search_bar.pack(fill="x", padx=36, pady=(0, 16))
+        search_bar.pack(fill="x", padx=36, pady=(0, 10))
         self.entry = ctk.CTkEntry(search_bar, placeholder_text="Digite o nome do lutador...",
                                    height=40, font=(Theme.FONT_FAMILY, 13))
         self.entry.pack(side="left", fill="x", expand=True)
         self.entry.bind("<Return>", lambda e: self._do_search())
         ctk.CTkButton(search_bar, text="Buscar", height=40, width=110, fg_color=Theme.ACCENT,
                       hover_color=Theme.ACCENT_HOVER, command=self._do_search).pack(side="left", padx=(10, 0))
+
+        filters_bar = ctk.CTkFrame(self, fg_color="transparent")
+        filters_bar.pack(fill="x", padx=36, pady=(0, 16))
+        ctk.CTkLabel(filters_bar, text="Filtros:", text_color=Theme.TEXT_SECONDARY,
+                     font=(Theme.FONT_FAMILY, 12)).pack(side="left", padx=(0, 8))
+        self.weight_class_filter = ctk.CTkComboBox(
+            filters_bar, values=["Todas as categorias"], width=200, height=32,
+            command=lambda _v: self._do_search(),
+        )
+        self.weight_class_filter.pack(side="left", padx=(0, 8))
+        self.nationality_filter = ctk.CTkComboBox(
+            filters_bar, values=["Todas as nacionalidades"], width=200, height=32,
+            command=lambda _v: self._do_search(),
+        )
+        self.nationality_filter.pack(side="left", padx=(0, 8))
+        ctk.CTkButton(filters_bar, text="Limpar filtros", width=110, height=32,
+                      fg_color=Theme.BG_SECONDARY, hover_color=Theme.BORDER,
+                      command=self._clear_filters).pack(side="left")
 
         body = ctk.CTkFrame(self, fg_color="transparent")
         body.pack(fill="both", expand=True, padx=36, pady=(0, 24))
@@ -331,27 +359,52 @@ class SearchPage(ctk.CTkFrame):
         self._render_empty_profile()
 
     def on_show(self, fighter_id: Optional[str] = None, **kwargs) -> None:
+        weight_classes = ["Todas as categorias"] + self.app.db.list_weight_classes()
+        nationalities = ["Todas as nacionalidades"] + self.app.db.list_nationalities()
+        self.weight_class_filter.configure(values=weight_classes)
+        self.nationality_filter.configure(values=nationalities)
+        if not self.weight_class_filter.get():
+            self.weight_class_filter.set("Todas as categorias")
+        if not self.nationality_filter.get():
+            self.nationality_filter.set("Todas as nacionalidades")
+
         if fighter_id is not None:
             fighter = self.app.db.get_fighter(fighter_id)
             if fighter:
                 self._show_profile(fighter)
 
+    def _clear_filters(self) -> None:
+        self.weight_class_filter.set("Todas as categorias")
+        self.nationality_filter.set("Todas as nacionalidades")
+        self._do_search()
+
     def _do_search(self) -> None:
         query = self.entry.get().strip()
+        weight_class = self.weight_class_filter.get()
+        nationality = self.nationality_filter.get()
+        weight_class = None if weight_class in ("", "Todas as categorias") else weight_class
+        nationality = None if nationality in ("", "Todas as nacionalidades") else nationality
+
         for widget in self.results_frame.winfo_children():
             widget.destroy()
 
-        if not query:
-            self.app.notify("Digite um nome para pesquisar.", "warning")
-            return
-
-        results = self.app.db.search_fighters(query)
-        self.app.db.log_search(query, results[0].fighter_id if results else None)
-
-        if not results:
-            ctk.CTkLabel(self.results_frame, text="Nenhum lutador encontrado.",
+        if not query and not weight_class and not nationality:
+            ctk.CTkLabel(self.results_frame, text="Digite um nome ou escolha um filtro para pesquisar.",
                          text_color=Theme.TEXT_MUTED, wraplength=240).pack(pady=20)
             return
+
+        results = self.app.db.filter_fighters(query=query or None, weight_class=weight_class,
+                                                nationality=nationality)
+        if query:
+            self.app.db.log_search(query, results[0].fighter_id if results else None)
+
+        if not results:
+            ctk.CTkLabel(self.results_frame, text="Nenhum lutador encontrado com esses filtros.",
+                         text_color=Theme.TEXT_MUTED, wraplength=240).pack(pady=20)
+            return
+
+        ctk.CTkLabel(self.results_frame, text=f"{len(results)} encontrado(s)",
+                     text_color=Theme.TEXT_MUTED, font=(Theme.FONT_FAMILY, 11)).pack(anchor="w", pady=(0, 4))
 
         for fighter in results:
             item = Card(self.results_frame, corner_radius=8, cursor="hand2")
@@ -385,7 +438,6 @@ class SearchPage(ctk.CTkFrame):
             ctk.CTkLabel(top, image=img, text="").pack(side="left", padx=(0, 20))
         else:
             placeholder_avatar(top).pack(side="left", padx=(0, 20))
-
         info = ctk.CTkFrame(top, fg_color="transparent")
         info.pack(side="left", fill="both", expand=True)
         ctk.CTkLabel(info, text=fighter.display_name, font=(Theme.FONT_FAMILY_BOLD, 20, "bold"),
@@ -481,6 +533,11 @@ class SearchPage(ctk.CTkFrame):
             if fighter.last_updated:
                 source_text += f" · atualizado em {fighter.last_updated}"
             ctk.CTkLabel(self.profile_frame, text=source_text, text_color=Theme.TEXT_MUTED,
+                         font=(Theme.FONT_FAMILY, 10)).pack(anchor="w", padx=28, pady=(0, 4))
+
+        if fighter.local_image_path and fighter.image_attribution:
+            photo_credit = f"Foto: {fighter.image_attribution} · {fighter.image_license or 'licença livre'} · Wikimedia Commons"
+            ctk.CTkLabel(self.profile_frame, text=photo_credit, text_color=Theme.TEXT_MUTED,
                          font=(Theme.FONT_FAMILY, 10)).pack(anchor="w", padx=28, pady=(0, 20))
 
     def _toggle_favorite(self, fighter: Fighter, button: ctk.CTkButton) -> None:
