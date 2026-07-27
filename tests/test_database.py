@@ -310,6 +310,53 @@ class TestAgeReportedInDatabase(unittest.TestCase):
         self.assertFalse(fighter.age_is_estimated)
 
 
+class TestStatsSummary(unittest.TestCase):
+    """get_stats_summary() alimenta a barra de números da Home."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.db_path = self.tmp / "test.db"
+        self.seed_csv = self.tmp / "seed.csv"
+        self.overrides_csv = self.tmp / "no_overrides.csv"
+        _write_seed_csv(self.seed_csv, [
+            {"fighter_id": "jon_jones", "name": "Jon Jones", "weight_class": "Heavyweight",
+             "nationality": "United States", "wins": 28, "losses": 1, "draws": 0},
+            {"fighter_id": "weili_zhang", "name": "Zhang Weili", "weight_class": "Women's Strawweight",
+             "nationality": "China", "wins": 26, "losses": 4, "draws": 0},
+        ])
+
+    def tearDown(self):
+        for f in (self.db_path, self.seed_csv, self.overrides_csv):
+            if f.exists():
+                os.remove(f)
+
+    def test_counts_are_correct(self):
+        from models import FightRecord
+        from datetime import date
+
+        db = DatabaseManager(db_path=str(self.db_path), seed_csv=str(self.seed_csv),
+                              overrides_csv=str(self.overrides_csv))
+        db.initialize()
+        db.save_fight_history([
+            FightRecord(fighter_id="jon_jones", opponent_name="A", fight_date=date(2020, 1, 1), result="win"),
+            FightRecord(fighter_id="jon_jones", opponent_name="B", fight_date=date(2021, 1, 1), result="win"),
+        ])
+
+        stats = db.get_stats_summary()
+        self.assertEqual(stats["fighter_count"], 2)
+        self.assertEqual(stats["fight_count"], 2)
+        self.assertEqual(stats["weight_class_count"], 2)
+        self.assertEqual(stats["nationality_count"], 2)
+
+    def test_zero_state_does_not_raise(self):
+        """Banco vazio (sem lutas ainda) não pode quebrar a Home."""
+        db = DatabaseManager(db_path=str(self.db_path), seed_csv=str(self.seed_csv),
+                              overrides_csv=str(self.overrides_csv))
+        db.initialize()
+        stats = db.get_stats_summary()
+        self.assertEqual(stats["fight_count"], 0)
+
+
 class TestFiltersAndPhotos(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())

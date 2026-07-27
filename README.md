@@ -305,6 +305,143 @@ qualquer nível de aninhamento dentro do link.
   explícito, em vez de gerar silenciosamente um `fighters_seed.csv`
   vazio como aconteceu nessa regressão.
 
+## 🩹 Correção de regressão (v1.3.3) — categorias erradas (homens em Women's Bantamweight, mulheres em Flyweight)
+
+Investigação com evidência real de novo — e não era erro aleatório,
+como você suspeitou. **Causa raiz:** a página lista primeiro as seções
+"Men's Pound-for-Pound Top Rank" e "Women's Pound-for-Pound Top Rank"
+(os melhores lutadores, independente de categoria) — e SÓ DEPOIS a
+divisão real de cada um. O cabeçalho dessas seções tem um sufixo
+**" Top Rank"** que a lista de categorias reconhecidas não esperava, e
+faltava o alternativa "Men's Pound-for-Pound" (só existia "Pound-for-Pound"
+e "Women's Pound-for-Pound"). Como esse cabeçalho nunca era reconhecido:
+
+1. A "categoria atual" ficava travada na última divisão real que tinha
+   batido antes daquela seção (não era resetada corretamente).
+2. Lutadores listados no Pound-for-Pound eram registrados com essa
+   categoria errada (a que sobrou de antes).
+3. Quando o MESMO lutador reaparecia depois na divisão de verdade dele,
+   a deduplicação ("primeira aparição vence") **ignorava** a segunda
+   aparição (a correta) — o dado errado do Pound-for-Pound já tinha
+   grudado.
+
+Isso explica os dois padrões relatados: homens que também aparecem no
+"Men's Pound-for-Pound Top Rank" (cabeçalho não reconhecido logo no
+início da página, nada resetava a categoria ainda) acabavam com
+qualquer valor que tivesse sobrado; mulheres do "Women's Pound-for-Pound
+Top Rank" herdavam a última categoria MASCULINA real que tinha batido
+antes (o "Flyweight" reportado). Corrigido adicionando o sufixo "Top
+Rank" e "Men's Pound-for-Pound" ao reconhecimento de cabeçalhos — **é
+uma correção sistêmica, não precisou de overrides manuais** para esse
+problema específico.
+
+`python scripts/scrape_gidstats.py --verbose` agora também mostra, pra
+cada cabeçalho, se foi reconhecido como divisão real ou como seção
+Pound-for-Pound (ignorada de propósito), e a atribuição final de cada
+lutador — exatamente pra depurar esse tipo de problema no futuro sem
+precisar investigar às cegas.
+
+## 🥋 Histórico de lutas (Sherdog + GIDStats)
+
+Nova fase do projeto: cada lutador agora pode ter o histórico completo
+de lutas — data, evento, adversário, resultado, método, round, tempo e
+(quando disponível) árbitro. **Sem gráficos ou estatísticas derivadas
+por enquanto** — só uma base de dados normalizada e consistente,
+propositalmente.
+
+### Por que Sherdog como fonte primária
+
+Antes de implementar, comparei o próprio GIDStats (que já scraneamos)
+contra o Sherdog.com — referência histórica da indústria de MMA desde
+1997, citada pela própria Wikipédia via template dedicado
+(`Template:Sherdog`). A diferença decisiva: o Sherdog usa uma
+**tabela HTML de verdade** (`<table class="new_table fighter">`) com o
+**resultado como coluna explícita** (`win`/`loss`/`draw`), enquanto o
+GIDStats mostra os 4 rótulos possíveis juntos ("Win! Loss! Draw Not
+Confirmed") sem deixar claro qual é o real — o mesmo tipo de estrutura
+frágil que já nos deu 3 regressões nesta conversa. Confirmado ao vivo
+que o Sherdog aceita requisições HTTP simples (sem necessidade de
+browser headless) nos caminhos usados.
+
+**GIDStats continua no papel de fallback** (quando o Sherdog não
+encontra o lutador — nome ambíguo, ou não catalogado lá) — mas com uma
+limitação assumida: como não conseguimos confirmar a estrutura exata
+do resultado nessa fonte, `result` fica deliberadamente `None` ("N/D")
+nas lutas vindas do GIDStats, em vez de arriscar um valor adivinhado.
+
+### Arquitetura plugável
+
+```
+history_providers/
+├── base.py               # Interface comum: HistoryProvider.fetch(fighter) -> list[FightRecord]
+├── sherdog_provider.py    # Fonte primária (tabela HTML, resultado explícito)
+└── gidstats_provider.py   # Fallback (resultado sempre N/D — limitação documentada)
+
+scripts/fetch_fight_history.py   # Orquestrador: tenta Sherdog, cai pro GIDStats se não achar
+```
+
+Trocar a ordem das fontes, desativar uma, ou adicionar uma terceira no
+futuro é uma mudança no orquestrador — não uma reescrita do banco ou
+da interface. Cada `FightRecord` grava sua própria proveniência
+(`source`, `source_url`) — dá pra saber de onde cada luta veio.
+
+### Uso
+
+```bash
+python scripts/fetch_fight_history.py --inspect "Islam Makhachev"   # debug, não grava nada
+python scripts/fetch_fight_history.py --limit 5                     # testa em poucos lutadores
+python scripts/fetch_fight_history.py                                 # roda pra todo o banco
+```
+
+### Limitações técnicas e de licenciamento, sendo honesto
+
+- **Busca por nome no Sherdog não é por relevância** — só alfabética.
+  Nomes comuns/ambíguos (mais de 1 candidato com nome exatamente
+  igual) são pulados de propósito, nunca "chutados".
+- **Não verifiquei formalmente os Termos de Uso do Sherdog** para
+  scraping automatizado — só confirmei que é tolerado na prática há
+  anos (ferramentas de terceiros documentadas publicamente). O coletor
+  verifica `robots.txt` antes de começar, do mesmo jeito que já
+  fazemos pro GIDStats, e usa um intervalo de 2s entre lutadores.
+- **Correspondência de lutador entre sites**: o slug do Sherdog não é
+  o mesmo do GIDStats — a busca por nome exato é a ponte entre os
+  dois, com a ambiguidade tratada como "não encontrado" em vez de
+  adivinhada.
+- **Cobertura**: ambas as fontes cobrem a carreira inteira (não só
+  UFC), o que é bom para completude mas pode incluir organizações
+  regionais com nomenclatura menos padronizada.
+
+## 🎨 UX e identidade visual (v1.4)
+
+A Home deixou de ser uma lista de cadastro e passou a comunicar a
+riqueza da base logo de cara: uma barra com números reais (lutadores
+cadastrados, lutas registradas, categorias de peso, nacionalidades —
+via `DatabaseManager.get_stats_summary()`), um texto de apresentação
+mais alinhado à proposta da plataforma, e uma seção "Lutadores em
+destaque" com cards mais ricos (categoria como badge colorido, cartel
+em destaque).
+
+**Componentes novos reutilizáveis** (`interface.py`): `StatCard`
+(número grande + rótulo, usado na barra da Home) e `FighterRowCard`
+(linha de lutador com badge de categoria + cartel, usada tanto na Home
+quanto na Busca — mesma aparência nas duas telas, um único lugar pra
+manter).
+
+**Perfil do lutador / histórico de lutas**: vitórias em verde, derrotas
+em vermelho, empates e No Contest numa cor neutra discreta (`Theme.NEUTRAL`,
+cinza-azulado — não usa o amarelo de alerta, que passaria a mensagem
+errada), barra lateral fina indicando o resultado, mais espaçamento
+entre os cards.
+
+**Navegação**: quando o adversário de uma luta do histórico também está
+cadastrado no banco (nome exatamente igual, sem ambiguidade), o nome
+vira um link direto pro perfil dele — reduz cliques sem precisar voltar
+pra busca. O card "Lutadores cadastrados" na Home também leva direto
+pra tela de Busca.
+
+Nenhuma animação foi adicionada de propósito — mantendo a leitura de
+"software profissional" pedida, não uma vitrine.
+
 ## 🏗️ Arquitetura
 
 ```
@@ -319,7 +456,12 @@ FightIQ/
 ├── models.py           # Dataclasses do domínio (Fighter, FighterStats, etc.)
 ├── utils.py             # Logging, tema visual, formatação
 ├── scripts/
-│   └── scrape_gidstats.py  # Coletor real de dados em escala (roda localmente)
+│   ├── scrape_gidstats.py       # Coletor real de dados em escala (roda localmente)
+│   └── fetch_fight_history.py   # Coletor de histórico de lutas (Sherdog + GIDStats)
+├── history_providers/           # Fontes plugáveis de histórico de lutas
+│   ├── base.py
+│   ├── sherdog_provider.py
+│   └── gidstats_provider.py
 ├── tests/                  # Testes automatizados (unittest)
 ├── requirements.txt
 ├── assets/data/          # CSV de dados reais (seed do banco) + manual_overrides.csv

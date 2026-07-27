@@ -200,6 +200,76 @@ class StatRow(ctk.CTkFrame):
                      font=(Theme.FONT_FAMILY, 12, "bold"), anchor="e").pack(side="right")
 
 
+class StatCard(ctk.CTkFrame):
+    """Card de número grande + rótulo, usado na barra de estatísticas da Home."""
+
+    def __init__(self, master, value: str, label: str, on_click=None, **kwargs):
+        kwargs.setdefault("fg_color", Theme.BG_CARD)
+        kwargs.setdefault("corner_radius", 12)
+        super().__init__(master, cursor="hand2" if on_click else "arrow", **kwargs)
+        ctk.CTkLabel(self, text=value, font=(Theme.FONT_FAMILY_BOLD, 26, "bold"),
+                     text_color=Theme.ACCENT).pack(pady=(18, 0))
+        ctk.CTkLabel(self, text=label, font=(Theme.FONT_FAMILY, 11),
+                     text_color=Theme.TEXT_SECONDARY).pack(pady=(2, 16))
+        if on_click:
+            for widget in (self, *self.winfo_children()):
+                widget.bind("<Button-1>", lambda e: on_click())
+
+
+_WEIGHT_CLASS_BADGE_COLORS = {
+    "Heavyweight": "#8a3b2b", "Light Heavyweight": "#8a5a2b", "Middleweight": "#8a7a2b",
+    "Welterweight": "#4f8a2b", "Lightweight": "#2b8a5f", "Featherweight": "#2b7a8a",
+    "Bantamweight": "#2b5a8a", "Flyweight": "#4a2b8a",
+}
+_DEFAULT_BADGE_COLOR = "#5c5c64"
+
+
+def _badge_color_for(weight_class: Optional[str]) -> str:
+    if not weight_class:
+        return _DEFAULT_BADGE_COLOR
+    key = weight_class.replace("Women's ", "")
+    return _WEIGHT_CLASS_BADGE_COLORS.get(key, _DEFAULT_BADGE_COLOR)
+
+
+class FighterRowCard(Card):
+    """
+    Linha de lutador rica (nome, categoria como badge colorido, cartel,
+    nacionalidade) usada tanto na Home quanto na Busca — um único lugar
+    pra manter a aparência consistente entre as duas telas.
+    """
+
+    def __init__(self, master, fighter: Fighter, on_click, **kwargs):
+        kwargs.setdefault("corner_radius", 10)
+        super().__init__(master, cursor="hand2", **kwargs)
+
+        left = ctk.CTkFrame(self, fg_color="transparent")
+        left.pack(side="left", fill="x", expand=True, padx=16, pady=10)
+
+        name_row = ctk.CTkFrame(left, fg_color="transparent")
+        name_row.pack(fill="x", anchor="w")
+        ctk.CTkLabel(name_row, text=fighter.display_name, font=(Theme.FONT_FAMILY, 13, "bold"),
+                     text_color=Theme.TEXT_PRIMARY, anchor="w").pack(side="left")
+        if fighter.weight_class:
+            badge = ctk.CTkLabel(
+                name_row, text=fighter.weight_class, font=(Theme.FONT_FAMILY, 9, "bold"),
+                text_color="#ffffff", fg_color=_badge_color_for(fighter.weight_class),
+                corner_radius=6, padx=8, pady=2,
+            )
+            badge.pack(side="left", padx=(8, 0))
+
+        ctk.CTkLabel(left, text=fighter.nationality or "Nacionalidade N/D",
+                     text_color=Theme.TEXT_SECONDARY, font=(Theme.FONT_FAMILY, 11),
+                     anchor="w").pack(fill="x", anchor="w", pady=(3, 0))
+
+        right = ctk.CTkFrame(self, fg_color="transparent")
+        right.pack(side="right", padx=16, pady=10)
+        ctk.CTkLabel(right, text=fighter.record_display, text_color=Theme.ACCENT,
+                     font=(Theme.FONT_FAMILY, 12, "bold")).pack()
+
+        for widget in (self, left, name_row, right, *left.winfo_children(), *right.winfo_children()):
+            widget.bind("<Button-1>", lambda e: on_click(fighter.fighter_id))
+
+
 def load_fighter_image(fighter: Fighter, size=(140, 140)) -> Optional[ctk.CTkImage]:
     """
     Carrega a foto de um lutador. Prioriza a foto local já baixada e
@@ -243,20 +313,42 @@ class HomePage(ctk.CTkFrame):
         super().__init__(master, fg_color=Theme.BG_PRIMARY)
         self.app = app
 
-        header = ctk.CTkFrame(self, fg_color="transparent")
-        header.pack(fill="x", padx=36, pady=(32, 8))
-        ctk.CTkLabel(header, text="Bem-vindo ao FightIQ", font=(Theme.FONT_FAMILY_BOLD, 26, "bold"),
-                     text_color=Theme.TEXT_PRIMARY).pack(anchor="w")
-        ctk.CTkLabel(header, text="Análise de desempenho de atletas do UFC com dados reais.",
-                     font=(Theme.FONT_FAMILY, 13), text_color=Theme.TEXT_SECONDARY).pack(anchor="w", pady=(4, 0))
+        scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        scroll.pack(fill="both", expand=True)
 
-        cards_frame = ctk.CTkFrame(self, fg_color="transparent")
-        cards_frame.pack(fill="x", padx=36, pady=20)
+        # --- Hero -----------------------------------------------------
+        hero = ctk.CTkFrame(scroll, fg_color="transparent")
+        hero.pack(fill="x", padx=36, pady=(32, 4))
+        ctk.CTkLabel(hero, text="PLATAFORMA DE ANÁLISE DE PERFORMANCE",
+                     font=(Theme.FONT_FAMILY, 11, "bold"), text_color=Theme.ACCENT).pack(anchor="w")
+        ctk.CTkLabel(hero, text="Bem-vindo ao FightIQ", font=(Theme.FONT_FAMILY_BOLD, 28, "bold"),
+                     text_color=Theme.TEXT_PRIMARY).pack(anchor="w", pady=(4, 6))
+        ctk.CTkLabel(
+            hero,
+            text="Explore estatísticas, histórico de lutas, comparações e análises\n"
+                 "completas dos atletas do UFC em uma única plataforma.",
+            font=(Theme.FONT_FAMILY, 14), text_color=Theme.TEXT_SECONDARY, justify="left",
+        ).pack(anchor="w")
+
+        # --- Barra de estatísticas -------------------------------------
+        self.stats_row = ctk.CTkFrame(scroll, fg_color="transparent")
+        self.stats_row.pack(fill="x", padx=36, pady=(24, 8))
+        for i in range(4):
+            self.stats_row.grid_columnconfigure(i, weight=1)
+
+        # --- Ações rápidas ----------------------------------------------
+        actions_header = ctk.CTkFrame(scroll, fg_color="transparent")
+        actions_header.pack(fill="x", padx=36, pady=(20, 10))
+        ctk.CTkLabel(actions_header, text="O que você quer fazer?", font=(Theme.FONT_FAMILY_BOLD, 15, "bold"),
+                     text_color=Theme.TEXT_PRIMARY).pack(anchor="w")
+
+        cards_frame = ctk.CTkFrame(scroll, fg_color="transparent")
+        cards_frame.pack(fill="x", padx=36, pady=(0, 10))
         for i in range(4):
             cards_frame.grid_columnconfigure(i, weight=1)
 
         actions = [
-            ("🔍", "Buscar Lutador", "Pesquise qualquer atleta cadastrado", "search"),
+            ("🔍", "Buscar Lutador", "Pesquise, filtre por categoria e nacionalidade", "search"),
             ("⚖️", "Comparar", "Compare dois lutadores lado a lado", "compare"),
             ("📊", "Dashboard", "Visualize gráficos de desempenho", "dashboard"),
             ("⭐", "Favoritos", "Acesse seus lutadores salvos", "favorites"),
@@ -264,7 +356,10 @@ class HomePage(ctk.CTkFrame):
         for i, (icon, title, desc, target) in enumerate(actions):
             card = Card(cards_frame, cursor="hand2")
             card.grid(row=0, column=i, sticky="nsew", padx=8)
-            ctk.CTkLabel(card, text=icon, font=(Theme.FONT_FAMILY, 28)).pack(pady=(20, 4))
+            badge = ctk.CTkFrame(card, width=44, height=44, corner_radius=22, fg_color=Theme.ACCENT_SOFT)
+            badge.pack(pady=(20, 8))
+            badge.pack_propagate(False)
+            ctk.CTkLabel(badge, text=icon, font=(Theme.FONT_FAMILY, 18)).pack(expand=True)
             ctk.CTkLabel(card, text=title, font=(Theme.FONT_FAMILY_BOLD, 14, "bold"),
                          text_color=Theme.TEXT_PRIMARY).pack()
             ctk.CTkLabel(card, text=desc, font=(Theme.FONT_FAMILY, 11), text_color=Theme.TEXT_SECONDARY,
@@ -272,16 +367,32 @@ class HomePage(ctk.CTkFrame):
             for widget in (card, *card.winfo_children()):
                 widget.bind("<Button-1>", lambda e, t=target: self.app.show_page(t))
 
-        # Lista rápida de lutadores no banco
-        list_frame = ctk.CTkFrame(self, fg_color="transparent")
-        list_frame.pack(fill="both", expand=True, padx=36, pady=(10, 24))
-        ctk.CTkLabel(list_frame, text="Lutadores no banco de dados", font=(Theme.FONT_FAMILY_BOLD, 15, "bold"),
-                     text_color=Theme.TEXT_PRIMARY).pack(anchor="w", pady=(0, 10))
+        # --- Lutadores em destaque ---------------------------------------
+        roster_header = ctk.CTkFrame(scroll, fg_color="transparent")
+        roster_header.pack(fill="x", padx=36, pady=(20, 10))
+        ctk.CTkLabel(roster_header, text="Lutadores em destaque", font=(Theme.FONT_FAMILY_BOLD, 15, "bold"),
+                     text_color=Theme.TEXT_PRIMARY).pack(side="left")
+        ctk.CTkButton(roster_header, text="Ver todos →", width=100, height=28, fg_color="transparent",
+                      hover_color=Theme.BG_CARD, text_color=Theme.ACCENT,
+                      command=lambda: self.app.show_page("search")).pack(side="right")
 
-        self.roster_container = ctk.CTkScrollableFrame(list_frame, fg_color="transparent", height=220)
-        self.roster_container.pack(fill="both", expand=True)
+        self.roster_container = ctk.CTkFrame(scroll, fg_color="transparent")
+        self.roster_container.pack(fill="both", expand=True, padx=36, pady=(0, 24))
 
     def on_show(self, **kwargs) -> None:
+        for widget in self.stats_row.winfo_children():
+            widget.destroy()
+        stats = self.app.db.get_stats_summary()
+        stat_cards = [
+            (str(stats["fighter_count"]), "Lutadores cadastrados", lambda: self.app.show_page("search")),
+            (str(stats["fight_count"]), "Lutas registradas", None),
+            (str(stats["weight_class_count"]), "Categorias de peso", None),
+            (str(stats["nationality_count"]), "Nacionalidades", None),
+        ]
+        for i, (value, label, on_click) in enumerate(stat_cards):
+            StatCard(self.stats_row, value, label, on_click=on_click).grid(
+                row=0, column=i, sticky="nsew", padx=8)
+
         for widget in self.roster_container.winfo_children():
             widget.destroy()
         fighters = self.app.db.list_all_fighters()
@@ -289,17 +400,15 @@ class HomePage(ctk.CTkFrame):
             ctk.CTkLabel(self.roster_container, text="Nenhum lutador cadastrado ainda.",
                          text_color=Theme.TEXT_MUTED).pack(pady=20)
             return
-        for fighter in fighters:
-            row = Card(self.roster_container, corner_radius=8)
-            row.pack(fill="x", pady=4)
-            ctk.CTkLabel(row, text=fighter.display_name, font=(Theme.FONT_FAMILY, 13, "bold"),
-                         text_color=Theme.TEXT_PRIMARY).pack(side="left", padx=16, pady=10)
-            ctk.CTkLabel(row, text=fighter.weight_class or "Categoria N/D",
-                         text_color=Theme.TEXT_SECONDARY, font=(Theme.FONT_FAMILY, 11)).pack(side="left", padx=10)
-            ctk.CTkButton(row, text="Ver perfil", width=90, height=28, fg_color=Theme.ACCENT,
-                          hover_color=Theme.ACCENT_HOVER,
-                          command=lambda fid=fighter.fighter_id: self.app.open_fighter_profile(fid)
-                          ).pack(side="right", padx=16, pady=8)
+        for fighter in fighters[:8]:
+            FighterRowCard(self.roster_container, fighter, on_click=self.app.open_fighter_profile).pack(
+                fill="x", pady=4)
+        if len(fighters) > 8:
+            ctk.CTkButton(
+                self.roster_container, text=f"Ver todos os {len(fighters)} lutadores",
+                fg_color=Theme.BG_SECONDARY, hover_color=Theme.BORDER, height=34,
+                command=lambda: self.app.show_page("search"),
+            ).pack(fill="x", pady=(8, 0))
 
 
 # ==========================================================================
@@ -407,15 +516,8 @@ class SearchPage(ctk.CTkFrame):
                      text_color=Theme.TEXT_MUTED, font=(Theme.FONT_FAMILY, 11)).pack(anchor="w", pady=(0, 4))
 
         for fighter in results:
-            item = Card(self.results_frame, corner_radius=8, cursor="hand2")
-            item.pack(fill="x", pady=4)
-            ctk.CTkLabel(item, text=fighter.display_name, font=(Theme.FONT_FAMILY, 13, "bold"),
-                         text_color=Theme.TEXT_PRIMARY, anchor="w").pack(fill="x", padx=14, pady=(10, 0))
-            ctk.CTkLabel(item, text=f"{fighter.weight_class or 'N/D'} · {fighter.nationality or 'N/D'}",
-                         text_color=Theme.TEXT_SECONDARY, font=(Theme.FONT_FAMILY, 11), anchor="w"
-                         ).pack(fill="x", padx=14, pady=(0, 10))
-            for widget in (item, *item.winfo_children()):
-                widget.bind("<Button-1>", lambda e, f=fighter: self._show_profile(f))
+            FighterRowCard(self.results_frame, fighter,
+                           on_click=lambda _fid, f=fighter: self._show_profile(f)).pack(fill="x", pady=4)
 
     def _render_empty_profile(self) -> None:
         for widget in self.profile_frame.winfo_children():
@@ -505,6 +607,66 @@ class SearchPage(ctk.CTkFrame):
             StatRow(stats_card, label, value).pack(fill="x", padx=16, pady=3)
         ctk.CTkLabel(stats_card, text="").pack(pady=4)
 
+        # Histórico de lutas — lista simples, sem gráficos/estatísticas
+        # derivadas de propósito (v1 desse recurso: só base de dados
+        # consistente).
+        history = self.app.db.list_fight_history(fighter.fighter_id)
+        if history:
+            history_card = Card(self.profile_frame)
+            history_card.pack(fill="x", padx=24, pady=10)
+            ctk.CTkLabel(history_card, text=f"Histórico de Lutas ({len(history)})",
+                         font=(Theme.FONT_FAMILY_BOLD, 13, "bold"),
+                         text_color=Theme.TEXT_PRIMARY, anchor="w").pack(fill="x", padx=16, pady=(16, 10))
+            for fight in history:
+                result_color = {
+                    "win": Theme.SUCCESS, "loss": Theme.ERROR,
+                    "draw": Theme.NEUTRAL, "no_contest": Theme.NEUTRAL,
+                }.get(fight.result, Theme.TEXT_MUTED)
+
+                outer = ctk.CTkFrame(history_card, fg_color="transparent")
+                outer.pack(fill="x", padx=16, pady=5)
+
+                # Barra lateral fina indicando o resultado (discreta, sem ícones/animações)
+                accent_bar = ctk.CTkFrame(outer, width=4, fg_color=result_color, corner_radius=2)
+                accent_bar.pack(side="left", fill="y", padx=(0, 10))
+
+                row = ctk.CTkFrame(outer, fg_color=Theme.BG_SECONDARY, corner_radius=8)
+                row.pack(side="left", fill="both", expand=True)
+
+                top_line = ctk.CTkFrame(row, fg_color="transparent")
+                top_line.pack(fill="x", padx=14, pady=(10, 3))
+                ctk.CTkLabel(top_line, text=fight.result_display, text_color=result_color,
+                             font=(Theme.FONT_FAMILY, 12, "bold"), width=85, anchor="w").pack(side="left")
+
+                opponent_id = self._resolve_opponent_id(fight.opponent_name)
+                opponent_label = ctk.CTkLabel(
+                    top_line, text=f"vs {fight.opponent_name}", text_color=Theme.TEXT_PRIMARY,
+                    font=(Theme.FONT_FAMILY, 12, "bold"), anchor="w",
+                    cursor="hand2" if opponent_id else "arrow",
+                )
+                opponent_label.pack(side="left", padx=(4, 0))
+                if opponent_id:
+                    opponent_label.configure(text_color=Theme.INFO)
+                    opponent_label.bind("<Button-1>", lambda e, fid=opponent_id: self.app.open_fighter_profile(fid))
+
+                date_text = fight.fight_date.strftime("%d/%m/%Y") if fight.fight_date else "Data N/D"
+                ctk.CTkLabel(top_line, text=date_text, text_color=Theme.TEXT_MUTED,
+                             font=(Theme.FONT_FAMILY, 11), anchor="e").pack(side="right")
+
+                bottom_line = ctk.CTkFrame(row, fg_color="transparent")
+                bottom_line.pack(fill="x", padx=14, pady=(0, 10))
+                detail = f"{fight.method_display}"
+                if fight.round:
+                    detail += f" · Round {fight.round}"
+                if fight.time:
+                    detail += f" · {fight.time}"
+                ctk.CTkLabel(bottom_line, text=detail, text_color=Theme.TEXT_SECONDARY,
+                             font=(Theme.FONT_FAMILY, 11), anchor="w").pack(side="left")
+                if fight.event_name:
+                    ctk.CTkLabel(bottom_line, text=fight.event_name, text_color=Theme.TEXT_MUTED,
+                                 font=(Theme.FONT_FAMILY, 10), anchor="e").pack(side="right")
+            ctk.CTkLabel(history_card, text="").pack(pady=6)
+
         missing = self.app.analyzer.scan_missing_data(stats)
         if missing:
             ctk.CTkLabel(
@@ -539,6 +701,19 @@ class SearchPage(ctk.CTkFrame):
             photo_credit = f"Foto: {fighter.image_attribution} · {fighter.image_license or 'licença livre'} · Wikimedia Commons"
             ctk.CTkLabel(self.profile_frame, text=photo_credit, text_color=Theme.TEXT_MUTED,
                          font=(Theme.FONT_FAMILY, 10)).pack(anchor="w", padx=28, pady=(0, 20))
+
+    def _resolve_opponent_id(self, opponent_name: str) -> Optional[str]:
+        """
+        Se o adversário de uma luta do histórico também estiver
+        cadastrado no banco (nome exatamente igual, sem ambiguidade),
+        devolve o fighter_id dele para permitir navegação direta.
+        Nunca "chuta" em caso de nome ambíguo ou parcial.
+        """
+        candidates = self.app.db.filter_fighters(query=opponent_name)
+        exact = [f for f in candidates if f.name.lower() == opponent_name.lower()]
+        if len(exact) == 1:
+            return exact[0].fighter_id
+        return None
 
     def _toggle_favorite(self, fighter: Fighter, button: ctk.CTkButton) -> None:
         if self.app.db.is_favorite(fighter.fighter_id):

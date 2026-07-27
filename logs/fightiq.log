@@ -66,3 +66,18 @@ IndexError: No item with that key
 2026-07-24 22:36:55 | INFO     | database | Banco populado com 175 lutadores a partir de C:\Users\joaov\OneDrive\Área de Trabalho\dev\claude\FightIQ\assets\data\fighters_seed.csv
 2026-07-24 22:37:09 | INFO     | database | Banco de dados já populado; seed automático ignorado.
 2026-07-24 22:37:12 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-25 11:23:07 | INFO     | database | Banco de dados já populado; seed automático ignorado.
+2026-07-25 11:23:09 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-25 11:28:15 | INFO     | database | Banco de dados já populado; seed automático ignorado.
+2026-07-25 11:28:16 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-25 11:49:46 | INFO     | database | Banco populado com 175 lutadores a partir de C:\Users\joaov\OneDrive\Área de Trabalho\dev\claude\FightIQ\assets\data\fighters_seed.csv
+2026-07-25 11:49:57 | INFO     | database | Banco de dados já populado; seed automático ignorado.
+2026-07-25 11:50:00 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-26 14:31:53 | INFO     | database | Banco de dados já populado; seed automático ignorado.
+2026-07-26 14:59:57 | INFO     | database | Banco de dados já populado; seed automático ignorado.
+2026-07-26 15:00:01 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-26 15:00:10 | INFO     | database | Histórico de pesquisas limpo.
+2026-07-27 10:27:36 | INFO     | database | Banco de dados já populado; seed automático ignorado.
+2026-07-27 10:27:37 | INFO     | fightiq.main | FightIQ iniciado com sucesso.
+2026-07-27 16:05:03 | INFO     | database | Banco de dados já populado; seed automático ignorado.
+2026-07-27 16:05:06 | INFO     | fightiq.main | FightIQ iniciado com sucesso.

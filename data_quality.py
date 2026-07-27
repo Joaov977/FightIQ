@@ -39,6 +39,86 @@ MIN_AGE, MAX_AGE = 17, 60
 MAX_PCT = 100.0
 MAX_SLPM, MAX_SAPM = 15.0, 15.0
 MAX_TD_AVG, MAX_SUB_AVG = 12.0, 8.0
+MIN_ROUND, MAX_ROUND = 1, 5
+
+VALID_RESULTS = {"win", "loss", "draw", "no_contest"}
+
+# Vocabulário fixo de métodos de vitória/derrota — normalização, não inferência.
+METHOD_CANONICAL = {
+    "ko": "KO/TKO", "tko": "KO/TKO", "ko/tko": "KO/TKO", "technical knockout": "KO/TKO",
+    "submission": "Submission", "sub": "Submission",
+    "decision": "Decision", "dec": "Decision",
+    "dq": "DQ", "disqualification": "DQ",
+    "no contest": "No Contest", "nc": "No Contest",
+    "overturned": "Overturned",
+}
+
+
+def normalize_method(raw: Optional[str]) -> Optional[str]:
+    """Padroniza a grafia do método (ex.: 'ko', 'KO', 'Ko/Tko' -> 'KO/TKO')."""
+    if not raw:
+        return None
+    key = raw.strip().lower()
+    return METHOD_CANONICAL.get(key, raw.strip())
+
+
+def sanitize_result(value: Optional[str]) -> Optional[str]:
+    """Aceita só o vocabulário fixo de resultado — qualquer outra coisa vira None."""
+    if not value:
+        return None
+    key = value.strip().lower().replace(" ", "_")
+    return key if key in VALID_RESULTS else None
+
+
+def sanitize_round(value) -> Optional[int]:
+    """Round precisa estar entre 1 e 5 (nenhuma luta de MMA profissional tem mais que isso)."""
+    if value is None or value == "":
+        return None
+    try:
+        r = int(float(value))
+    except (TypeError, ValueError):
+        return None
+    return r if MIN_ROUND <= r <= MAX_ROUND else None
+
+
+def sanitize_fight_date(value) -> Optional[str]:
+    """
+    Valida a data de uma luta: precisa ser uma data real, não no futuro
+    (lutas já ocorridas), e depois de 1993 (ano de fundação do UFC —
+    qualquer coisa antes disso é quase certamente erro de parsing).
+    """
+    if not value:
+        return None
+    try:
+        if isinstance(value, str):
+            y, m, d = (int(p) for p in value.split("-"))
+            parsed = date(y, m, d)
+        else:
+            parsed = value
+    except (ValueError, TypeError):
+        return None
+
+    if parsed > date.today() or parsed.year < 1993:
+        return None
+    return parsed.isoformat() if isinstance(value, str) else value
+
+
+def sanitize_fight_record_dict(row: dict) -> dict:
+    """
+    Aplica as mesmas regras de sanidade de sanitize_fighter_dict, mas
+    para um registro de luta individual (vindo de qualquer provider de
+    histórico). Mesmo princípio: descarta o implausível, normaliza a
+    grafia, nunca adivinha.
+    """
+    row = dict(row)
+    row["result"] = sanitize_result(row.get("result"))
+    row["method"] = normalize_method(row.get("method"))
+    row["round"] = sanitize_round(row.get("round"))
+    row["fight_date"] = sanitize_fight_date(row.get("fight_date"))
+    row["weight_class"] = normalize_weight_class(row.get("weight_class"))
+    return row
+
+
 # --------------------------------------------------------------------------
 # Vocabulário fixo de categorias de peso (normalização, não inferência)
 # --------------------------------------------------------------------------

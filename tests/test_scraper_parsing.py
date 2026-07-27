@@ -268,7 +268,77 @@ class TestRankingDropdownDoesNotContaminateWeightClass(unittest.TestCase):
         # nome não fica vazio nem quebra, mesmo vindo de spans concatenados
         self.assertIn("Tom", entries["https://gidstats.com/fighters/tom_aspinall.html"].name)
 
-    def test_verbose_mode_does_not_raise_and_returns_same_result(self):
+    def test_pound_for_pound_sections_do_not_leak_into_real_division(self):
+        """
+        Regressão do bug relatado: "Men's/Women's Pound-for-Pound Top
+        Rank" (que sempre vêm ANTES da divisão real de um lutador na
+        página) têm um sufixo " Top Rank" que não batia com a lista de
+        categorias reconhecidas. Como esse cabeçalho nunca era
+        reconhecido, a categoria "atual" ficava travada na última
+        divisão real que tinha batido antes — e a deduplicação
+        (primeira aparição vence) fazia esse valor errado grudar no
+        lutador, mesmo ele reaparecendo depois na divisão certa.
+        """
+        from unittest.mock import MagicMock
+
+        html = """
+        <html><body>
+        <h3>Men's Pound-for-Pound Top Rank</h3>
+        <a href="/fighters/islam_makhachev.html">Islam Makhachev</a>
+        <a href="/fighters/tom_aspinall.html">Tom Aspinall</a>
+
+        <h3>Heavyweight</h3>
+        <a href="/fighters/tom_aspinall.html">Tom Aspinall</a>
+
+        <h3>Welterweight</h3>
+        <a href="/fighters/islam_makhachev.html">Islam Makhachev</a>
+
+        <h3>Women's Pound-for-Pound Top Rank</h3>
+        <a href="/fighters/valentina_shevchenko.html">Valentina Shevchenko</a>
+
+        <h3>Women's Flyweight</h3>
+        <a href="/fighters/valentina_shevchenko.html">Valentina Shevchenko</a>
+        </body></html>
+        """
+        session = MagicMock()
+        response = MagicMock()
+        response.text = html
+        response.raise_for_status = lambda: None
+        session.get.return_value = response
+
+        entries = fetch_ranking_entries(session)
+        self.assertEqual(entries["https://gidstats.com/fighters/tom_aspinall.html"].weight_class, "Heavyweight")
+        self.assertEqual(entries["https://gidstats.com/fighters/islam_makhachev.html"].weight_class, "Welterweight")
+        self.assertEqual(
+            entries["https://gidstats.com/fighters/valentina_shevchenko.html"].weight_class, "Women's Flyweight"
+        )
+
+    def test_fighter_listed_only_under_pound_for_pound_is_not_registered_with_wrong_class(self):
+        """
+        Se um lutador aparecer SÓ na seção Pound-for-Pound (sem uma
+        divisão real detectável no HTML de teste), ele não deve ser
+        registrado com uma categoria arbitrária/errada — melhor não
+        aparecer do que aparecer com dado errado.
+        """
+        from unittest.mock import MagicMock
+
+        html = """
+        <html><body>
+        <h3>Men's Pound-for-Pound Top Rank</h3>
+        <a href="/fighters/so_aparece_aqui.html">So Aparece Aqui</a>
+        <h3>Heavyweight</h3>
+        <a href="/fighters/outro_lutador.html">Outro Lutador</a>
+        </body></html>
+        """
+        session = MagicMock()
+        response = MagicMock()
+        response.text = html
+        response.raise_for_status = lambda: None
+        session.get.return_value = response
+
+        entries = fetch_ranking_entries(session)
+        self.assertNotIn("https://gidstats.com/fighters/so_aparece_aqui.html", entries)
+        self.assertEqual(entries["https://gidstats.com/fighters/outro_lutador.html"].weight_class, "Heavyweight")
         """verbose=True é só instrumentação de diagnóstico — não pode mudar o resultado."""
         from unittest.mock import MagicMock
 

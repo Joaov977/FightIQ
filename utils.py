@@ -108,6 +108,7 @@ class Theme:
     WARNING = "#e6a326"
     ERROR = "#e6394a"
     INFO = "#3a86ff"
+    NEUTRAL = "#8a8a92"  # discreto — empates e No Contest (não é alerta nem erro)
 
     BORDER = "#2a2a2e"
 

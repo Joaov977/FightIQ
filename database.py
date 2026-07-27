@@ -37,7 +37,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterator, List, Optional
 
-from models import Fighter, FighterStats, FavoriteEntry, SearchHistoryEntry
+from models import Fighter, FighterStats, FavoriteEntry, SearchHistoryEntry, FightRecord
 from data_quality import sanitize_fighter_dict, describe_sanitization
 from utils import DATA_DIR, DATABASE_PATH, SEED_CSV_PATH, get_logger, parse_iso_date
 
@@ -119,6 +119,27 @@ CREATE TABLE IF NOT EXISTS search_history (
     query           TEXT NOT NULL,
     fighter_id      TEXT,
     searched_at     TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS fight_history (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    fighter_id          TEXT NOT NULL REFERENCES fighters(fighter_id) ON DELETE CASCADE,
+    opponent_name       TEXT NOT NULL,
+    fight_date          TEXT,
+    event_name          TEXT,
+    event_source_url    TEXT,
+    opponent_source_url TEXT,
+    result              TEXT,
+    method              TEXT,
+    method_detail       TEXT,
+    round               INTEGER,
+    time                TEXT,
+    weight_class        TEXT,
+    referee             TEXT,
+    source              TEXT,
+    source_url          TEXT,
+    last_updated        TEXT,
+    UNIQUE(fighter_id, opponent_name, fight_date)
 );
 
 CREATE TABLE IF NOT EXISTS meta (
@@ -484,6 +505,28 @@ class DatabaseManager:
             rows = conn.execute("SELECT * FROM fighters ORDER BY name ASC").fetchall()
         return [_row_to_fighter(r) for r in rows]
 
+    def get_stats_summary(self) -> dict:
+        """
+        Números agregados usados na Home para transmitir a riqueza da
+        base de dados (quantidade de lutadores, lutas registradas,
+        categorias e nacionalidades distintas).
+        """
+        with self._connect() as conn:
+            fighter_count = conn.execute("SELECT COUNT(*) AS c FROM fighters").fetchone()["c"]
+            fight_count = conn.execute("SELECT COUNT(*) AS c FROM fight_history").fetchone()["c"]
+            weight_class_count = conn.execute(
+                "SELECT COUNT(DISTINCT weight_class) AS c FROM fighters WHERE weight_class IS NOT NULL"
+            ).fetchone()["c"]
+            nationality_count = conn.execute(
+                "SELECT COUNT(DISTINCT nationality) AS c FROM fighters WHERE nationality IS NOT NULL"
+            ).fetchone()["c"]
+        return {
+            "fighter_count": fighter_count,
+            "fight_count": fight_count,
+            "weight_class_count": weight_class_count,
+            "nationality_count": nationality_count,
+        }
+
     def list_weight_classes(self) -> List[str]:
         """Categorias de peso distintas presentes no banco, ordenadas alfabeticamente."""
         with self._connect() as conn:
@@ -622,6 +665,59 @@ class DatabaseManager:
             conn.execute("DELETE FROM search_history")
         logger.info("Histórico de pesquisas limpo.")
 
+    # ------------------------------------------------------------------
+    # Histórico de lutas (fight_history)
+    # ------------------------------------------------------------------
+    def save_fight_history(self, records: List[FightRecord]) -> int:
+        """
+        Grava um lote de lutas (tipicamente o histórico completo de UM
+        lutador, vindo de um provider). Usa INSERT OR REPLACE com a
+        chave natural (fighter_id, opponent_name, fight_date), então
+        rodar o coletor de novo atualiza registros existentes em vez de
+        duplicar. Retorna quantos registros foram gravados.
+        """
+        if not records:
+            return 0
+        with self._connect() as conn:
+            for r in records:
+                conn.execute(
+                    """
+                    INSERT OR REPLACE INTO fight_history (
+                        fighter_id, opponent_name, fight_date, event_name,
+                        event_source_url, opponent_source_url, result,
+                        method, method_detail, round, time, weight_class,
+                        referee, source, source_url, last_updated
+                    ) VALUES (?,?,?,?, ?,?,?, ?,?,?,?,?, ?,?,?,?)
+                    """,
+                    (
+                        r.fighter_id, r.opponent_name,
+                        r.fight_date.isoformat() if r.fight_date else None,
+                        r.event_name, r.event_source_url, r.opponent_source_url,
+                        r.result, r.method, r.method_detail, r.round, r.time,
+                        r.weight_class, r.referee, r.source, r.source_url, r.last_updated,
+                    ),
+                )
+        return len(records)
+
+    def list_fight_history(self, fighter_id: str) -> List[FightRecord]:
+        """Histórico de lutas de um lutador, mais recente primeiro (datas nulas por último)."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT * FROM fight_history WHERE fighter_id = ?
+                ORDER BY (fight_date IS NULL), fight_date DESC
+                """,
+                (fighter_id,),
+            ).fetchall()
+        return [_row_to_fight_record(r) for r in rows]
+
+    def has_fight_history(self, fighter_id: str) -> bool:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT 1 FROM fight_history WHERE fighter_id = ? LIMIT 1", (fighter_id,)
+            ).fetchone()
+        return row is not None
+
 
 # --------------------------------------------------------------------------
 # Helpers privados
@@ -679,4 +775,25 @@ def _row_to_fighter(row: sqlite3.Row) -> Fighter:
         source_url=row["source_url"],
         last_updated=row["last_updated"],
         manually_overridden_fields=row["manually_overridden_fields"],
+    )
+
+
+def _row_to_fight_record(row: sqlite3.Row) -> FightRecord:
+    return FightRecord(
+        fighter_id=row["fighter_id"],
+        opponent_name=row["opponent_name"],
+        fight_date=parse_iso_date(row["fight_date"]),
+        event_name=row["event_name"],
+        event_source_url=row["event_source_url"],
+        opponent_source_url=row["opponent_source_url"],
+        result=row["result"],
+        method=row["method"],
+        method_detail=row["method_detail"],
+        round=row["round"],
+        time=row["time"],
+        weight_class=row["weight_class"],
+        referee=row["referee"],
+        source=row["source"],
+        source_url=row["source_url"],
+        last_updated=row["last_updated"],
     )

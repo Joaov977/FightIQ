@@ -176,6 +176,52 @@ class SearchHistoryEntry:
 
 
 @dataclass
+class FightRecord:
+    """
+    Um único registro de luta no histórico de um lutador.
+
+    Representa exatamente os campos pedidos para o histórico completo:
+    data, evento, adversário, resultado, método, round, tempo e
+    categoria — mais campos de proveniência (fonte, URL, referee como
+    bônus quando disponível) para nunca perder de onde o dado veio.
+
+    `result` usa um vocabulário fixo (não string livre): "win", "loss",
+    "draw", "no_contest", ou None quando a fonte não deixou claro —
+    nunca inventamos um resultado que não pudemos confirmar.
+    """
+
+    fighter_id: str
+    opponent_name: str
+    fight_date: Optional[date] = None
+    event_name: Optional[str] = None
+    event_source_url: Optional[str] = None
+    opponent_source_url: Optional[str] = None
+    result: Optional[str] = None          # "win" | "loss" | "draw" | "no_contest"
+    method: Optional[str] = None          # "KO/TKO" | "Submission" | "Decision" | "DQ" | ...
+    method_detail: Optional[str] = None   # ex.: "Unanimous", "Rear-Naked Choke", "Head Kick"
+    round: Optional[int] = None
+    time: Optional[str] = None            # "mm:ss"
+    weight_class: Optional[str] = None
+    referee: Optional[str] = None
+    source: Optional[str] = None
+    source_url: Optional[str] = None
+    last_updated: Optional[str] = None
+
+    @property
+    def result_display(self) -> str:
+        return {
+            "win": "Vitória", "loss": "Derrota",
+            "draw": "Empate", "no_contest": "No Contest",
+        }.get(self.result or "", "N/D")
+
+    @property
+    def method_display(self) -> str:
+        if self.method and self.method_detail:
+            return f"{self.method} ({self.method_detail})"
+        return self.method or "N/D"
+
+
+@dataclass
 class ComparisonHighlight:
     """Um único destaque de vantagem entre dois lutadores, para a tela de comparação."""
 

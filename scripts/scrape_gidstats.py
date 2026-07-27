@@ -85,7 +85,7 @@ WEIGHT_CLASS_ORDER = [
     "Women's Strawweight", "Women's Flyweight", "Women's Bantamweight",
     "Women's Featherweight", "Flyweight", "Bantamweight", "Featherweight",
     "Lightweight", "Welterweight", "Middleweight", "Light Heavyweight",
-    "Heavyweight", "Pound-for-Pound", "Women's Pound-for-Pound",
+    "Heavyweight", "Pound-for-Pound", "Women's Pound-for-Pound", "Men's Pound-for-Pound",
 ]
 
 
@@ -195,7 +195,8 @@ def fetch_ranking_entries(session: requests.Session, verbose: bool = False) -> d
         tag.decompose()
 
     heading_re = re.compile(
-        r"^\s*(" + "|".join(re.escape(wc) for wc in sorted(WEIGHT_CLASS_ORDER, key=len, reverse=True)) + r")\s*$",
+        r"^\s*(" + "|".join(re.escape(wc) for wc in sorted(WEIGHT_CLASS_ORDER, key=len, reverse=True)) + r")"
+        r"(?:\s+Top\s+Rank)?\s*$",
         re.IGNORECASE,
     )
 
@@ -222,8 +223,13 @@ def fetch_ranking_entries(session: requests.Session, verbose: bool = False) -> d
             if heading_match:
                 headings_matched += 1
                 normalized = normalize_weight_class(heading_match.group(1))
-                current_class = normalized if normalized and "pound" not in normalized.lower() else None
+                is_pound_for_pound = bool(normalized) and "pound" in normalized.lower()
+                current_class = None if is_pound_for_pound else normalized
                 rank_counter = 0
+                if verbose:
+                    origem = "seção Pound-for-Pound (ignorada de propósito)" if is_pound_for_pound else "cabeçalho de seção"
+                    print(f"  [diagnóstico] Categoria identificada: {text!r} -> {current_class!r} "
+                          f"(origem: {origem})")
             continue
 
         if getattr(node, "name", None) != "a":
@@ -237,10 +243,15 @@ def fetch_ranking_entries(session: requests.Session, verbose: bool = False) -> d
 
         full_url = BASE_URL + href
         if full_url in entries:
+            if verbose:
+                print(f"  [diagnóstico] {href} já registrado como {entries[full_url].weight_class!r} — "
+                      f"reaparição em {current_class!r} ignorada (primeira atribuição prevalece)")
             continue
         name = re.sub(r"\s+", " ", node.get_text(" ", strip=True)).strip()
         rank_counter += 1
         entries[full_url] = RankingEntry(name=name, weight_class=current_class, rank=rank_counter)
+        if verbose:
+            print(f"  [diagnóstico] Atribuído: {name!r} -> {current_class!r} (de {href})")
 
     if verbose:
         print(f"  [diagnóstico] Cabeçalhos de categoria reconhecidos (heading_re bateu): {headings_matched}")
